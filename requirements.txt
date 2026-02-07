@@ -2,8 +2,7 @@
 fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 
-# x402 Protocol SDK (包含 Solana 支援)
-# Note: x402 v2.0+ 已內建 Solana 支援，不需要單獨安裝 x402-solana
+# x402 Protocol SDK (includes Solana support)
 x402>=0.3.0
 
 # HTTP Clients
@@ -17,11 +16,11 @@ pydantic-settings>=2.7.0
 # Configuration
 python-dotenv>=1.0.0
 
-# Blockchain - Solana (優先支援)
+# Blockchain - Solana
 solana>=0.36.0
 solders>=0.21.0
 
-# Blockchain - EVM (次要支援)
+# Blockchain - EVM
 web3>=7.6.0
 eth-account>=0.13.0
 

@@ -29,6 +29,9 @@ class Config(BaseSettings):
     svm_private_key: str = Field(default="", description="Solana private key")
     solana_rpc_url: str = Field(default="https://api.devnet.solana.com", description="Solana RPC endpoint")
 
+    # EVM RPC URL
+    evm_rpc_url: str = Field(default="https://sepolia.base.org", description="EVM RPC endpoint")
+
     # Pincer Treasury Configuration
     treasury_evm_address: str = Field(default="", description="Treasury EVM address")
     treasury_evm_private_key: str = Field(default="", description="Treasury EVM private key")
@@ -48,10 +51,10 @@ class Config(BaseSettings):
     merchant_port: int = Field(default=4023)
     merchant_url: str = Field(default="http://localhost:4023")
 
-    # x402 Facilitator
+    # x402 Facilitator (deprecated - Pincer IS the facilitator now)
     facilitator_url: str = Field(
-        default="https://x402.org/facilitator",
-        description="Public Coinbase facilitator or local instance",
+        default="",
+        description="Optional external facilitator URL (no longer needed - Pincer is its own facilitator)",
     )
 
     # Webhook Security

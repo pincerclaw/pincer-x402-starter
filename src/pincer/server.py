@@ -32,8 +32,15 @@ from src.models import (
 
 from src.pincer.offers import offer_engine
 from src.pincer.payout import payout_engine
-from src.pincer.verification import verifier
+from src.pincer.verification import pincer_facilitator, verifier
 from src.pincer.webhooks import WebhookHandler
+
+
+# Pydantic models for x402 facilitator endpoints
+class SettleRequest(BaseModel):
+    """Settle endpoint request body."""
+    paymentPayload: dict
+    paymentRequirements: dict
 
 # Validate configuration
 validate_config_for_service("pincer")
@@ -86,14 +93,39 @@ async def verify_payment(request: PaymentVerificationRequest):
 
 
 @app.post("/settle")
-async def settle_payment():
-    """Settle an x402 payment (placeholder).
+async def settle_payment(request: SettleRequest):
+    """Settle an x402 payment on-chain.
 
-    In a full x402 implementation, this would submit the transaction to the blockchain.
-    For Pincer's use case, settlement happens via the facilitator or user directly.
+    Args:
+        request: Payment payload and requirements to settle.
+
+    Returns:
+        SettleResponse with success, transaction, network, and payer.
     """
-    logger.info("Payment settlement request (not implemented in MVP)")
-    return {"status": "not_implemented", "message": "Settlement done by facilitator"}
+    try:
+        logger.info("Payment settlement request")
+        result = await pincer_facilitator.settle_payment(
+            payment_payload=request.paymentPayload,
+            payment_requirements=request.paymentRequirements,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Settlement error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/supported")
+async def get_supported():
+    """Get supported payment kinds and extensions.
+
+    Returns:
+        SupportedResponse with kinds, extensions, and signers.
+    """
+    try:
+        return pincer_facilitator.get_supported()
+    except Exception as e:
+        logger.error(f"Supported error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/offers")

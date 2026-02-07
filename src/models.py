@@ -92,8 +92,8 @@ class PaymentVerificationRequest(BaseModel):
     """Request to verify x402 payment."""
 
     session_id: str
-    payment_signature: str
-    payment_requirements: dict
+    payment_payload: dict = Field(description="x402 payment payload")
+    payment_requirements: dict = Field(description="x402 payment requirements")
 
 
 class PaymentVerificationResponse(BaseModel):
