@@ -20,27 +20,28 @@ class PayoutEngine:
     """Sends rebate payments from Pincer treasury wallet to users."""
 
     async def send_rebate(
-        self, user_address: str, amount_usd: float, network: str
+        self, user_address: str, amount: float, asset: str, network: str
     ) -> Dict[str, any]:
         """Send a rebate payment to a user.
 
         Args:
             user_address: User wallet address to send rebate to.
-            amount_usd: Rebate amount in USD.
+            amount: Rebate amount.
+            asset: Asset symbol (e.g. USDC).
             network: Network identifier (e.g., eip155:84532, solana:...).
 
         Returns:
             Dict with status and transaction details.
         """
         logger.info(
-            f"Initiating rebate payout: ${amount_usd:.2f} to {user_address} on {network}"
+            f"Initiating rebate payout: {amount:.6f} {asset} to {user_address} on {network}"
         )
 
         try:
             if network.startswith("eip155"):
-                return await self._send_evm_rebate(user_address, amount_usd, network)
+                return await self._send_evm_rebate(user_address, amount, asset, network)
             elif network.startswith("solana"):
-                return await self._send_svm_rebate(user_address, amount_usd, network)
+                return await self._send_svm_rebate(user_address, amount, asset, network)
             else:
                 error_msg = f"Unsupported network: {network}"
                 logger.error(error_msg)
@@ -51,19 +52,20 @@ class PayoutEngine:
             return {"status": "error", "error": str(e)}
 
     async def _send_evm_rebate(
-        self, user_address: str, amount_usd: float, network: str
+        self, user_address: str, amount: float, asset: str, network: str
     ) -> Dict[str, any]:
         """Send EVM rebate (USDC on Base Sepolia).
 
         Args:
             user_address: User EVM address.
-            amount_usd: Amount in USD.
+            amount: Amount.
+            asset: Asset symbol.
             network: Network identifier.
 
         Returns:
             Dict with transaction details.
         """
-        logger.info(f"Sending EVM rebate: ${amount_usd:.2f} USDC to {user_address}")
+        logger.info(f"Sending EVM rebate: {amount:.6f} {asset} to {user_address}")
 
         # For MVP demo, we'll use a placeholder implementation
         # In production, this would:
@@ -87,7 +89,8 @@ class PayoutEngine:
                 "status": "success",
                 "tx_hash": tx_hash,
                 "network": network,
-                "amount_usd": amount_usd,
+                "amount": amount,
+                "asset": asset,
                 "simulated": True,
             }
 
@@ -108,7 +111,7 @@ class PayoutEngine:
         # )
         #
         # # Calculate amount (USDC has 6 decimals)
-        # amount_usdc = int(amount_usd * 1_000_000)
+        # amount_usdc = int(amount * 1_000_000)
         #
         # # Build transaction
         # tx = usdc_contract.functions.transfer(
@@ -132,7 +135,8 @@ class PayoutEngine:
         #     "status": "success",
         #     "tx_hash": receipt.transactionHash.hex(),
         #     "network": network,
-        #     "amount_usd": amount_usd,
+        #     "amount": amount,
+        #     "asset": asset,
         # }
 
         logger.warning("Full EVM payout implementation not yet complete")
@@ -142,85 +146,40 @@ class PayoutEngine:
         }
 
     async def _send_svm_rebate(
-        self, user_address: str, amount_usd: float, network: str
+        self, user_address: str, amount: float, asset: str, network: str
     ) -> Dict[str, any]:
-        """Send SVM rebate (SOL on Solana Devnet).
+        """Send SVM rebate (SOL/SPL on Solana Devnet).
 
         Args:
-            user_address: User Solana address.
-            amount_usd: Amount in USD.
+            user_address: User SVM address.
+            amount: Amount.
+            asset: Asset symbol.
             network: Network identifier.
 
         Returns:
             Dict with transaction details.
         """
-        logger.info(f"Sending SVM rebate: ${amount_usd:.2f} SOL to {user_address}")
+        logger.info(f"Sending SVM rebate: {amount:.6f} {asset} to {user_address}")
 
-        # For MVP demo, we'll use a placeholder implementation
-        # In production, this would:
-        # 1. Connect to Solana Devnet RPC
-        # 2. Use treasury wallet keypair
-        # 3. Convert USD to SOL (or use USDC-SPL if preferred)
-        # 4. Create and sign transfer transaction
-        # 5. Submit transaction
-        # 6. Wait for confirmation
-        # 7. Return transaction signature
-
+        # Placeholder implementation
         if not config.treasury_svm_private_key:
             logger.warning(
                 "TREASURY_SVM_PRIVATE_KEY not configured - using simulation mode"
             )
-            # Simulate transaction signature
-            tx_hash = f"{'1234567890abcdef' * 8}"  # 128 hex chars (Solana signature)
+            # Simulate transaction hash
+            tx_hash = f"5{'1234567890abcdef' * 5}"  # Solana sig is base58, but for demo hex/random ok
             logger.info(f"[SIMULATED] SVM rebate tx: {tx_hash}")
 
             return {
                 "status": "success",
                 "tx_hash": tx_hash,
                 "network": network,
-                "amount_usd": amount_usd,
+                "amount": amount,
+                "asset": asset,
                 "simulated": True,
             }
-
-        # TODO: Full implementation
-        # from solana.rpc.async_api import AsyncClient
-        # from solana.keypair import Keypair
-        # from solana.transaction import Transaction
-        # from solana.system_program import transfer, TransferParams
-        # from solders.pubkey import Pubkey
-        #
-        # # Connect to devnet
-        # client = AsyncClient("https://api.devnet.solana.com")
-        #
-        # # Load treasury keypair
-        # treasury_keypair = Keypair.from_base58_string(config.treasury_svm_private_key)
-        #
-        # # Convert USD to lamports (needs price oracle in production)
-        # # For demo, assume $1 = 0.01 SOL (fictional rate)
-        # sol_amount = amount_usd * 0.01
-        # lamports = int(sol_amount * 1_000_000_000)
-        #
-        # # Create transfer instruction
-        # transfer_ix = transfer(TransferParams(
-        #     from_pubkey=treasury_keypair.pubkey(),
-        #     to_pubkey=Pubkey.from_string(user_address),
-        #     lamports=lamports,
-        # ))
-        #
-        # # Build and send transaction
-        # tx = Transaction().add(transfer_ix)
-        # result = await client.send_transaction(tx, treasury_keypair)
-        #
-        # # Wait for confirmation
-        # await client.confirm_transaction(result.value)
-        #
-        # return {
-        #     "status": "success",
-        #     "tx_hash": str(result.value),
-        #     "network": network,
-        #     "amount_usd": amount_usd,
-        # }
-
+            
+        # TODO: integrate with solana-py for real transfers
         logger.warning("Full SVM payout implementation not yet complete")
         return {
             "status": "error",

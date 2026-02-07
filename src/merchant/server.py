@@ -36,14 +36,14 @@ class CheckoutRequest(BaseModel):
 
     session_id: str
     user_address: str
-    purchase_amount_usd: float = 25.00  # Default burger order amount
+    purchase_amount: float = 25.00  # Default burger order amount
 
 
 class CheckoutResponse(BaseModel):
     """Checkout confirmation response."""
 
     order_id: str
-    purchase_amount_usd: float
+    purchase_amount: float
     webhook_sent: bool
     webhook_id: str
     message: str
@@ -87,7 +87,7 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
 
     logger.info(
         f"Processing checkout: order={order_id}, session={request.session_id}, "
-        f"user={request.user_address}, amount=${request.purchase_amount_usd:.2f}"
+        f"user={request.user_address}, amount={request.purchase_amount:.2f}"
     )
 
     # Simulate payment processing delay
@@ -99,7 +99,8 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
         "webhook_id": webhook_id,
         "session_id": request.session_id,
         "user_address": request.user_address,
-        "purchase_amount_usd": request.purchase_amount_usd,
+        "purchase_amount": request.purchase_amount,
+        "purchase_asset": "USD",
         "timestamp": datetime.utcnow().isoformat(),
         "merchant_id": "shake-shack",
     }
@@ -148,7 +149,7 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
 
     return CheckoutResponse(
         order_id=order_id,
-        purchase_amount_usd=request.purchase_amount_usd,
+        purchase_amount=request.purchase_amount,
         webhook_sent=webhook_sent,
         webhook_id=webhook_id,
         message=response_message,

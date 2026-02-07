@@ -166,10 +166,14 @@ class WebhookHandler:
         logger.info(f"Session {webhook.session_id} is eligible for rebate settlement")
 
         # 4. Get campaign and validate budget
-        campaign = await db.get_campaign(config.sponsor_campaign_id)
+        # TODO: Get campaign ID from session or offer (for now config MVP)
+        campaign = await db.get_campaign(config.sponsor_campaign_id) # Using MVP ID from config, but DB call is correct
 
         if not campaign:
-            error_msg = f"Campaign not found: {config.sponsor_campaign_id}"
+            # Fallback to loading from JSON if not in DB? No, DB should have it.
+            # But the campaign ID might be different if I changed it in JSON.
+            # config.sponsor_campaign_id (default "shake-shack-promo") should match JSON ID.
+            error_msg = f"Campaign not found: {config.sponsor_campaign_id or 'unknown'}"
             logger.error(error_msg)
             await db.update_webhook_status(webhook.webhook_id, "failed", error_msg)
             return {
@@ -195,7 +199,7 @@ class WebhookHandler:
         try:
             logger.info(
                 f"Settling rebate for session {webhook.session_id}: "
-                f"${campaign.rebate_amount_usd:.2f} to {webhook.user_address}"
+                f"{campaign.rebate_amount:.6f} {campaign.rebate_asset} to {webhook.user_address}"
             )
 
             # Create settlement record
@@ -205,7 +209,8 @@ class WebhookHandler:
                 session_id=webhook.session_id,
                 webhook_id=webhook.webhook_id,
                 user_address=webhook.user_address,
-                rebate_amount_usd=campaign.rebate_amount_usd,
+                rebate_amount=campaign.rebate_amount,
+                rebate_asset=campaign.rebate_asset,
                 network=session.network,
                 campaign_id=campaign.campaign_id,
                 status="pending",
@@ -217,7 +222,8 @@ class WebhookHandler:
             # Send rebate via payout engine
             payout_result = await self.payout_engine.send_rebate(
                 user_address=webhook.user_address,
-                amount_usd=campaign.rebate_amount_usd,
+                amount=campaign.rebate_amount,
+                asset=campaign.rebate_asset,
                 network=session.network,
             )
 
@@ -244,7 +250,8 @@ class WebhookHandler:
                     "webhook_id": webhook.webhook_id,
                     "settlement_id": settlement_id,
                     "tx_hash": tx_hash,
-                    "rebate_amount_usd": campaign.rebate_amount_usd,
+                    "rebate_amount": campaign.rebate_amount,
+                    "rebate_asset": campaign.rebate_asset,
                 }
             else:
                 # Payout failed

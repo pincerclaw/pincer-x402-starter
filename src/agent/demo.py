@@ -98,11 +98,9 @@ async def main():
         print_step(2, "Prepare payment credentials")
 
         # Format payment amount properly
+        # Format payment amount properly
         price_usd = config.content_price_usd
-        if price_usd < 0.01:
-            print(f"Payment amount: {price_usd * 1_000_000:.0f} USDC (${price_usd})")
-        else:
-            print(f"Payment amount: ${price_usd:.6f} USDC")
+        print(f"Payment amount: {price_usd:.6f} USDC")
 
         # Create x402 client
         client = x402Client()
@@ -177,12 +175,34 @@ async def main():
                 # Print sponsors if available
                 sponsors = data.get("sponsors", [])
                 if sponsors:
-                    print("\n🎁 Bonus: Sponsor Offers Included!\n")
+                    print("\n🎁 Sponsor Offers:\n")
                     for sponsor in sponsors:
                         print(f"   💰 {sponsor['merchant_name']}")
                         print(f"      {sponsor['offer_text']}")
-                        print(f"      Rebate: {sponsor['rebate_amount']}")
+                        # Handle rebate amount which might be string (old) or float (new)
+                        rebate_val = sponsor.get('rebate_amount')
+                        rebate_asset = sponsor.get('rebate_asset', 'USDC')
+                        if isinstance(rebate_val, float):
+                            print(f"      Rebate: {rebate_val:.6f} {rebate_asset} (x402 fee refund)")
+                        else:
+                            print(f"      Rebate: {rebate_val} (x402 fee refund)")
+                        
+                        # Display coupons
+                        coupons = sponsor.get('coupons', [])
+                        if coupons:
+                            print("      Coupons:")
+                            for coupon in coupons:
+                                discount = f"{coupon['discount_value']}%" if coupon['discount_type'] == 'percentage' else f"${coupon['discount_value']}"
+                                print(f"         • {coupon['code']}: {coupon['description']} ({discount})")
+                        
+                        # Display checkout URL
+                        if 'checkout_url' in sponsor:
+                            print(f"      Checkout: {sponsor['checkout_url']}")
+                        elif 'merchant_url' in sponsor:
+                            print(f"      Checkout: {sponsor['merchant_url']}")
                         print()
+                else:
+                    print("\n🎁 Sponsor Offers: None available for this session.\n")
 
                 # Extract payment response
                 try:

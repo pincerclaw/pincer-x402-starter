@@ -68,7 +68,7 @@ async def startup():
     """Initialize database on startup."""
     logger.info("Initializing Pincer service...")
     await db.initialize()
-    await db.initialize_default_campaign()
+    await db.initialize_campaigns()
     logger.info("Pincer service initialized")
 
 
@@ -150,6 +150,57 @@ async def get_supported():
     except Exception as e:
         logger.error(f"Supported error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sponsors/{session_id}")
+async def get_sponsors(session_id: str):
+    """Get sponsor offers for a session.
+    
+    This endpoint allows resource servers to fetch sponsor offers
+    directly when x402 middleware doesn't pass them through.
+    
+    Args:
+        session_id: The payment session ID
+        
+    Returns:
+        Dict with sponsors list
+    """
+    import uuid
+    try:
+        # Get active campaigns from DB (MVP: just take the first one)
+        campaigns = await db.get_active_campaigns()
+        
+        if not campaigns:
+            return {"sponsors": []}
+            
+        campaign = campaigns[0]
+        
+        if campaign and campaign.active and campaign.budget_remaining >= campaign.rebate_amount:
+            offer_id = f"off-{uuid.uuid4().hex[:8]}"
+            
+            # Create coupons
+            from src.models import Coupon, SponsoredOffer
+            
+            offer = SponsoredOffer(
+                sponsor_id=campaign.campaign_id,
+                merchant_name=campaign.merchant_name,
+                offer_text=campaign.offer_text,
+                rebate_amount=campaign.rebate_amount,
+                rebate_asset=campaign.rebate_asset,
+                rebate_network=campaign.rebate_network,
+                coupons=campaign.coupons or [],
+                checkout_url=f"{config.merchant_url}/checkout?session_id={session_id}&offer_id={offer_id}",
+                session_id=session_id,
+                offer_id=offer_id,
+            )
+            
+            logger.info(f"Returning sponsor offer for session {session_id}")
+            return {"sponsors": [offer.model_dump()]}
+        
+        return {"sponsors": []}
+    except Exception as e:
+        logger.error(f"Error getting sponsors: {e}")
+        return {"sponsors": []}
 
 
 

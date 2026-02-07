@@ -62,7 +62,7 @@ class RecommendationsResponse(BaseModel):
     sponsors: list["SponsoredOffer"] = []
 
 
-# Sample restaurant data
+# Sample restaurant data (base list - does NOT include sponsored restaurants)
 SAMPLE_RESTAURANTS = [
     Restaurant(
         name="Eleven Madison Park",
@@ -79,13 +79,6 @@ SAMPLE_RESTAURANTS = [
         description="Historic Brooklyn steakhouse famous for dry-aged porterhouse",
     ),
     Restaurant(
-        name="Shake Shack",
-        cuisine="Burgers",
-        rating=4.5,
-        price_level=2,
-        description="Modern day roadside burger stand serving premium burgers and shakes",
-    ),
-    Restaurant(
         name="Joe's Pizza",
         cuisine="Pizza",
         rating=4.6,
@@ -100,6 +93,15 @@ SAMPLE_RESTAURANTS = [
         description="Contemporary American cuisine in an elegant tavern setting",
     ),
 ]
+
+# Sponsored restaurant (injected when sponsor offer exists)
+SHAKE_SHACK = Restaurant(
+    name="Shake Shack",
+    cuisine="Burgers",
+    rating=4.5,
+    price_level=2,
+    description="Modern day roadside burger stand serving premium burgers and shakes",
+)
 
 
 # Create FastAPI app
@@ -192,22 +194,30 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
         verification_data = getattr(request.state, "payment_verification", None)
         sponsors = []
         
-        if verification_data:
-            logger.info(f"Payment verified, session_id: {session_id}")
-            
-            # Try to extract sponsors from verification response
-            if isinstance(verification_data, dict):
-                sponsors_data = verification_data.get("sponsors", [])
-                sponsors = [SponsoredOffer(**s) for s in sponsors_data]
-            elif hasattr(verification_data, "sponsors"):
-                sponsors = verification_data.sponsors
-            elif hasattr(verification_data, "extra") and isinstance(verification_data.extra, dict):
-                s_data = verification_data.extra.get("sponsors", [])
-                sponsors = [SponsoredOffer(**s) for s in s_data]
-            
+        # Always try to fetch sponsors from Pincer (x402 middleware doesn't pass custom data)
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                pincer_response = await client.get(
+                    f"{config.pincer_url}/sponsors/{session_id}",
+                    timeout=5.0,
+                )
+                if pincer_response.status_code == 200:
+                    sponsors_data = pincer_response.json().get("sponsors", [])
+                    sponsors = [SponsoredOffer(**s) for s in sponsors_data]
+                    logger.info(f"Fetched {len(sponsors)} sponsors from Pincer")
+        except Exception as e:
+            logger.warning(f"Could not fetch sponsors from Pincer: {e}")
+        
+        # Build restaurant list - inject Shake Shack if sponsor offer exists
+        restaurants = list(SAMPLE_RESTAURANTS)
+        if sponsors:
+            # Insert sponsored restaurant at position 3 (after top 2)
+            restaurants.insert(2, SHAKE_SHACK)
+            logger.info("Injected Shake Shack as sponsored restaurant")
         
         response = RecommendationsResponse(
-            restaurants=SAMPLE_RESTAURANTS,
+            restaurants=restaurants,
             session_id=session_id,
             sponsors=sponsors
         )

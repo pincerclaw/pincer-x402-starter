@@ -5,11 +5,12 @@ support for idempotency and anti-replay protection.
 """
 
 import asyncio
+import json
 import sqlite3
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, List
 
 import aiosqlite
 
@@ -31,9 +32,15 @@ CREATE TABLE IF NOT EXISTS campaigns (
     campaign_id TEXT PRIMARY KEY,
     merchant_name TEXT NOT NULL,
     offer_text TEXT NOT NULL,
-    rebate_amount_usd REAL NOT NULL,
-    total_budget_usd REAL NOT NULL,
-    remaining_budget_usd REAL NOT NULL,
+    
+    rebate_amount REAL NOT NULL,
+    rebate_asset TEXT NOT NULL,
+    rebate_network TEXT NOT NULL,
+    
+    budget_total REAL NOT NULL,
+    budget_remaining REAL NOT NULL,
+    budget_asset TEXT NOT NULL,
+    
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -44,7 +51,10 @@ CREATE TABLE IF NOT EXISTS sessions (
     session_id TEXT PRIMARY KEY,
     user_address TEXT NOT NULL,
     network TEXT NOT NULL,
-    amount_paid_usd REAL NOT NULL,
+    
+    amount_paid REAL NOT NULL,
+    payment_asset TEXT NOT NULL,
+    
     payment_hash TEXT,
     verified_at TEXT NOT NULL,
     rebate_settled INTEGER NOT NULL DEFAULT 0,
@@ -70,7 +80,10 @@ CREATE TABLE IF NOT EXISTS settlements (
     session_id TEXT NOT NULL,
     webhook_id TEXT NOT NULL,
     user_address TEXT NOT NULL,
-    rebate_amount_usd REAL NOT NULL,
+    
+    rebate_amount REAL NOT NULL,
+    rebate_asset TEXT NOT NULL,
+    
     network TEXT NOT NULL,
     tx_hash TEXT,
     status TEXT NOT NULL CHECK(status IN ('pending', 'confirmed', 'failed')),
@@ -112,236 +125,227 @@ class Database:
             await db.commit()
         logger.info(f"Database initialized at {self.db_path}")
 
-    async def initialize_default_campaign(self) -> None:
-        """Initialize the default sponsor campaign from config."""
-        campaign = SponsorCampaign(
-            campaign_id=config.sponsor_campaign_id,
-            merchant_name=config.sponsor_merchant_name,
-            offer_text=config.sponsor_offer_text,
-            rebate_amount_usd=config.sponsor_rebate_amount_usd,
-            total_budget_usd=config.sponsor_total_budget_usd,
-            remaining_budget_usd=config.sponsor_total_budget_usd,
-            active=True,
-            created_at=datetime.utcnow(),
-        )
+    async def initialize_campaigns(self) -> None:
+        """Initialize sponsor campaigns from JSON config."""
+        try:
+            with open(config.sponsor_data_path, "r") as f:
+                campaigns_data = json.load(f)
+            
+            async with aiosqlite.connect(self.db_path) as db:
+                for data in campaigns_data:
+                    # Convert JSON to model
+                    campaign = SponsorCampaign(
+                        campaign_id=data["id"],
+                        merchant_name=data["merchant_name"],
+                        offer_text=data["offer_text"],
+                        rebate_amount=data["rebate"]["amount"],
+                        rebate_asset=data["rebate"]["asset"],
+                        rebate_network=data["rebate"]["network"],
+                        budget_total=data["budget"]["total"],
+                        budget_remaining=data["budget"]["remaining"],
+                        budget_asset=data["budget"]["asset"],
+                        active=True,
+                        created_at=datetime.utcnow(),
+                    )
 
-        async with aiosqlite.connect(self.db_path) as db:
-            # Check if campaign already exists
-            cursor = await db.execute(
-                "SELECT campaign_id FROM campaigns WHERE campaign_id = ?",
-                (campaign.campaign_id,),
-            )
-            exists = await cursor.fetchone()
+                    # Check if campaign already exists
+                    cursor = await db.execute(
+                        "SELECT campaign_id FROM campaigns WHERE campaign_id = ?",
+                        (campaign.campaign_id,),
+                    )
+                    exists = await cursor.fetchone()
 
-            if not exists:
-                await db.execute(
-                    """
-                    INSERT INTO campaigns 
-                    (campaign_id, merchant_name, offer_text, rebate_amount_usd, 
-                     total_budget_usd, remaining_budget_usd, active, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        campaign.campaign_id,
-                        campaign.merchant_name,
-                        campaign.offer_text,
-                        campaign.rebate_amount_usd,
-                        campaign.total_budget_usd,
-                        campaign.remaining_budget_usd,
-                        1 if campaign.active else 0,
-                        campaign.created_at.isoformat(),
-                        campaign.created_at.isoformat(),
-                    ),
-                )
+                    if not exists:
+                        await db.execute(
+                            """
+                            INSERT INTO campaigns 
+                            (campaign_id, merchant_name, offer_text, 
+                             rebate_amount, rebate_asset, rebate_network,
+                             budget_total, budget_remaining, budget_asset,
+                             active, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (
+                                campaign.campaign_id,
+                                campaign.merchant_name,
+                                campaign.offer_text,
+                                campaign.rebate_amount,
+                                campaign.rebate_asset,
+                                campaign.rebate_network,
+                                campaign.budget_total,
+                                campaign.budget_remaining,
+                                campaign.budget_asset,
+                                1 if campaign.active else 0,
+                                campaign.created_at.isoformat(),
+                                datetime.utcnow().isoformat(),
+                            ),
+                        )
+                        logger.info(f"Initialized campaign: {campaign.campaign_id}")
                 await db.commit()
-                logger.info(f"Initialized campaign: {campaign.campaign_id}")
-            else:
-                logger.info(f"Campaign already exists: {campaign.campaign_id}")
+        except Exception as e:
+            logger.error(f"Failed to initialize campaigns: {e}")
 
-    # Campaign operations
     async def get_campaign(self, campaign_id: str) -> Optional[SponsorCampaign]:
-        """Get a sponsor campaign by ID.
-
-        Args:
-            campaign_id: Campaign identifier.
-
-        Returns:
-            SponsorCampaign if found, None otherwise.
-        """
+        """Get sponsor campaign by ID."""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM campaigns WHERE campaign_id = ?",
-                (campaign_id,),
-            )
-            row = await cursor.fetchone()
+            async with db.execute(
+                "SELECT * FROM campaigns WHERE campaign_id = ?", (campaign_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return SponsorCampaign(
+                        campaign_id=row["campaign_id"],
+                        merchant_name=row["merchant_name"],
+                        offer_text=row["offer_text"],
+                        rebate_amount=row["rebate_amount"],
+                        rebate_asset=row["rebate_asset"],
+                        rebate_network=row["rebate_network"],
+                        budget_total=row["budget_total"],
+                        budget_remaining=row["budget_remaining"],
+                        budget_asset=row["budget_asset"],
+                        active=bool(row["active"]),
+                        created_at=datetime.fromisoformat(row["created_at"]),
+                    )
+        return None
 
-            if row:
-                return SponsorCampaign(
-                    campaign_id=row["campaign_id"],
-                    merchant_name=row["merchant_name"],
-                    offer_text=row["offer_text"],
-                    rebate_amount_usd=row["rebate_amount_usd"],
-                    total_budget_usd=row["total_budget_usd"],
-                    remaining_budget_usd=row["remaining_budget_usd"],
-                    active=bool(row["active"]),
-                    created_at=datetime.fromisoformat(row["created_at"]),
-                )
-            return None
+    async def get_active_campaigns(self) -> List[SponsorCampaign]:
+        """Get all active campaigns with sufficient budget."""
+        async with aiosqlite.connect(self.db_path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                "SELECT * FROM campaigns WHERE active = 1 AND budget_remaining >= rebate_amount"
+            ) as cursor:
+                rows = await cursor.fetchall()
+                campaigns = []
+                for row in rows:
+                    campaigns.append(
+                        SponsorCampaign(
+                            campaign_id=row["campaign_id"],
+                            merchant_name=row["merchant_name"],
+                            offer_text=row["offer_text"],
+                            rebate_amount=row["rebate_amount"],
+                            rebate_asset=row["rebate_asset"],
+                            rebate_network=row["rebate_network"],
+                            budget_total=row["budget_total"],
+                            budget_remaining=row["budget_remaining"],
+                            budget_asset=row["budget_asset"],
+                            active=bool(row["active"]),
+                            created_at=datetime.fromisoformat(row["created_at"]),
+                        )
+                    )
+                return campaigns
 
     async def reserve_budget(self, campaign_id: str, amount: float) -> bool:
-        """Reserve budget for an offer (atomic operation).
-
+        """Reserve budget for a campaign (deduct from remaining).
+        
         Args:
-            campaign_id: Campaign to reserve from.
-            amount: Amount to reserve.
-
+            campaign_id: Campaign ID.
+            amount: Amount to deduct.
+            
         Returns:
-            True if reservation succeeded, False if insufficient budget.
+            True if budget was reserved, False if insufficient budget.
         """
-        async with self._lock:
+        async with self._lock:  # Simple mutex for budget updates
             async with aiosqlite.connect(self.db_path) as db:
-                # Check current budget
                 cursor = await db.execute(
-                    "SELECT remaining_budget_usd, active FROM campaigns WHERE campaign_id = ?",
+                    "SELECT budget_remaining, active FROM campaigns WHERE campaign_id = ?",
                     (campaign_id,),
                 )
                 row = await cursor.fetchone()
-
+                
                 if not row:
                     logger.warning(f"Campaign not found: {campaign_id}")
                     return False
-
+                    
                 remaining, active = row
+                
                 if not active:
                     logger.warning(f"Campaign inactive: {campaign_id}")
                     return False
-
+                    
                 if remaining < amount:
-                    logger.warning(
-                        f"Insufficient budget for {campaign_id}: "
-                        f"need ${amount}, have ${remaining}"
-                    )
+                    logger.warning(f"Insufficient budget for {campaign_id}: {remaining} < {amount}")
                     return False
-
-                # Reserve budget
+                
+                # Deduct budget
                 await db.execute(
                     """
                     UPDATE campaigns 
-                    SET remaining_budget_usd = remaining_budget_usd - ?,
-                        updated_at = ?
+                    SET budget_remaining = budget_remaining - ?, updated_at = ?
                     WHERE campaign_id = ?
                     """,
                     (amount, datetime.utcnow().isoformat(), campaign_id),
                 )
                 await db.commit()
-                logger.info(f"Reserved ${amount} from campaign {campaign_id}")
                 return True
 
-    async def deduct_budget(self, campaign_id: str, amount: float) -> bool:
-        """Deduct budget after settlement (should already be reserved).
-
-        Args:
-            campaign_id: Campaign to deduct from.
-            amount: Amount to deduct.
-
-        Returns:
-            True if deduction succeeded.
-        """
-        # Budget was already reserved, so this is just for record-keeping
-        # In a production system, you might separate "reserved" vs "spent" budgets
-        logger.info(f"Budget already deducted during reservation for {campaign_id}: ${amount}")
-        return True
-
-    # Session operations
     async def create_session(self, session: PaymentSession) -> None:
-        """Create a payment session record.
-
-        Args:
-            session: Payment session to create.
-        """
+        """Create a new payment session record."""
         async with aiosqlite.connect(self.db_path) as db:
-            await db.execute(
-                """
-                INSERT INTO sessions 
-                (session_id, user_address, network, amount_paid_usd, payment_hash,
-                 verified_at, rebate_settled, correlation_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    session.session_id,
-                    session.user_address,
-                    session.network,
-                    session.amount_paid_usd,
-                    session.payment_hash,
-                    session.verified_at.isoformat(),
-                    1 if session.rebate_settled else 0,
-                    session.correlation_id,
-                ),
-            )
-            await db.commit()
-        logger.info(f"Created session: {session.session_id}")
+            try:
+                await db.execute(
+                    """
+                    INSERT INTO sessions 
+                    (session_id, user_address, network, amount_paid, payment_asset,
+                     payment_hash, verified_at, rebate_settled, correlation_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        session.session_id,
+                        session.user_address,
+                        session.network,
+                        session.amount_paid,
+                        session.payment_asset,
+                        session.payment_hash,
+                        session.verified_at.isoformat(),
+                        1 if session.rebate_settled else 0,
+                        session.correlation_id,
+                    ),
+                )
+                await db.commit()
+            except sqlite3.IntegrityError:
+                logger.warning(f"Session already exists: {session.session_id}")
 
     async def get_session(self, session_id: str) -> Optional[PaymentSession]:
-        """Get a payment session by ID.
-
-        Args:
-            session_id: Session identifier.
-
-        Returns:
-            PaymentSession if found, None otherwise.
-        """
+        """Get payment session by ID."""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM sessions WHERE session_id = ?",
-                (session_id,),
-            )
-            row = await cursor.fetchone()
+            async with db.execute(
+                "SELECT * FROM sessions WHERE session_id = ?", (session_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return PaymentSession(
+                        session_id=row["session_id"],
+                        user_address=row["user_address"],
+                        network=row["network"],
+                        amount_paid=row["amount_paid"],
+                        payment_asset=row["payment_asset"],
+                        payment_hash=row["payment_hash"],
+                        verified_at=datetime.fromisoformat(row["verified_at"]),
+                        rebate_settled=bool(row["rebate_settled"]),
+                        correlation_id=row["correlation_id"],
+                    )
+        return None
 
-            if row:
-                return PaymentSession(
-                    session_id=row["session_id"],
-                    user_address=row["user_address"],
-                    network=row["network"],
-                    amount_paid_usd=row["amount_paid_usd"],
-                    payment_hash=row["payment_hash"],
-                    verified_at=datetime.fromisoformat(row["verified_at"]),
-                    rebate_settled=bool(row["rebate_settled"]),
-                    correlation_id=row["correlation_id"],
-                )
-            return None
-
-    async def mark_session_rebate_settled(self, session_id: str) -> None:
-        """Mark a session as having its rebate settled (anti-replay protection).
-
-        Args:
-            session_id: Session to mark as settled.
-        """
+    async def mark_session_settled(self, session_id: str) -> None:
+        """Mark a session as having its rebate settled."""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "UPDATE sessions SET rebate_settled = 1 WHERE session_id = ?",
                 (session_id,),
             )
             await db.commit()
-        logger.info(f"Marked session as settled: {session_id}")
 
-    # Webhook operations (idempotency)
-    async def create_webhook_record(self, webhook: WebhookRecord) -> bool:
-        """Create a webhook record for idempotency tracking.
-
-        Args:
-            webhook: Webhook record to create.
-
-        Returns:
-            True if record was created (first time), False if duplicate.
-        """
-        try:
-            async with aiosqlite.connect(self.db_path) as db:
+    async def create_webhook(self, webhook: WebhookRecord) -> None:
+        """Create a new webhook tracking record."""
+        async with aiosqlite.connect(self.db_path) as db:
+            try:
                 await db.execute(
                     """
                     INSERT INTO webhooks 
-                    (webhook_id, session_id, user_address, status, received_at,
+                    (webhook_id, session_id, user_address, status, received_at, 
                      processed_at, error_message, rebate_tx_hash)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
@@ -357,61 +361,32 @@ class Database:
                     ),
                 )
                 await db.commit()
-            logger.info(f"Created webhook record: {webhook.webhook_id}")
-            return True
-        except sqlite3.IntegrityError:
-            logger.warning(f"Webhook already exists (idempotency): {webhook.webhook_id}")
-            return False
+            except sqlite3.IntegrityError:
+                logger.warning(f"Webhook already exists: {webhook.webhook_id}")
 
-    async def get_webhook_record(self, webhook_id: str) -> Optional[WebhookRecord]:
-        """Get a webhook record by ID.
-
-        Args:
-            webhook_id: Webhook identifier.
-
-        Returns:
-            WebhookRecord if found, None otherwise.
-        """
+    async def get_webhook(self, webhook_id: str) -> Optional[WebhookRecord]:
+        """Get webhook record by ID."""
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute(
-                "SELECT * FROM webhooks WHERE webhook_id = ?",
-                (webhook_id,),
-            )
-            row = await cursor.fetchone()
+            async with db.execute(
+                "SELECT * FROM webhooks WHERE webhook_id = ?", (webhook_id,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    return WebhookRecord(
+                        webhook_id=row["webhook_id"],
+                        session_id=row["session_id"],
+                        user_address=row["user_address"],
+                        status=row["status"],
+                        received_at=datetime.fromisoformat(row["received_at"]),
+                        processed_at=datetime.fromisoformat(row["processed_at"]) if row["processed_at"] else None,
+                        error_message=row["error_message"],
+                        rebate_tx_hash=row["rebate_tx_hash"],
+                    )
+        return None
 
-            if row:
-                return WebhookRecord(
-                    webhook_id=row["webhook_id"],
-                    session_id=row["session_id"],
-                    user_address=row["user_address"],
-                    status=row["status"],
-                    received_at=datetime.fromisoformat(row["received_at"]),
-                    processed_at=(
-                        datetime.fromisoformat(row["processed_at"])
-                        if row["processed_at"]
-                        else None
-                    ),
-                    error_message=row["error_message"],
-                    rebate_tx_hash=row["rebate_tx_hash"],
-                )
-            return None
-
-    async def update_webhook_status(
-        self,
-        webhook_id: str,
-        status: str,
-        error_message: Optional[str] = None,
-        rebate_tx_hash: Optional[str] = None,
-    ) -> None:
-        """Update webhook processing status.
-
-        Args:
-            webhook_id: Webhook to update.
-            status: New status (processing, completed, failed).
-            error_message: Error message if failed.
-            rebate_tx_hash: Transaction hash if settled.
-        """
+    async def update_webhook_status(self, webhook_id: str, status: str, error: str = None, tx_hash: str = None) -> None:
+        """Update webhook status."""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
@@ -422,35 +397,31 @@ class Database:
                 (
                     status,
                     datetime.utcnow().isoformat(),
-                    error_message,
-                    rebate_tx_hash,
+                    error,
+                    tx_hash,
                     webhook_id,
                 ),
             )
             await db.commit()
-        logger.info(f"Updated webhook {webhook_id} status to {status}")
 
-    # Settlement operations
     async def create_settlement(self, settlement: RebateSettlement) -> None:
-        """Create a settlement record.
-
-        Args:
-            settlement: Settlement to create.
-        """
+        """Create a new settlement record."""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
                 INSERT INTO settlements 
-                (settlement_id, session_id, webhook_id, user_address, rebate_amount_usd,
-                 network, tx_hash, status, campaign_id, settled_at, confirmed_at, correlation_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (settlement_id, session_id, webhook_id, user_address, 
+                 rebate_amount, rebate_asset, network, tx_hash, status, 
+                 campaign_id, settled_at, confirmed_at, correlation_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     settlement.settlement_id,
                     settlement.session_id,
                     settlement.webhook_id,
                     settlement.user_address,
-                    settlement.rebate_amount_usd,
+                    settlement.rebate_amount,
+                    settlement.rebate_asset,
                     settlement.network,
                     settlement.tx_hash,
                     settlement.status,
@@ -461,33 +432,24 @@ class Database:
                 ),
             )
             await db.commit()
-        logger.info(f"Created settlement: {settlement.settlement_id}")
 
-    async def update_settlement_status(
-        self,
-        settlement_id: str,
-        status: str,
-        tx_hash: Optional[str] = None,
-    ) -> None:
-        """Update settlement status.
-
-        Args:
-            settlement_id: Settlement to update.
-            status: New status (pending, confirmed, failed).
-            tx_hash: Transaction hash if available.
-        """
+    async def update_settlement_status(self, settlement_id: str, status: str, tx_hash: str = None) -> None:
+        """Update settlement status."""
         async with aiosqlite.connect(self.db_path) as db:
-            confirmed_at = datetime.utcnow().isoformat() if status == "confirmed" else None
+            updates = ["status = ?", "confirmed_at = ?"]
+            params = [status, datetime.utcnow().isoformat()]
+            
+            if tx_hash:
+                updates.append("tx_hash = ?")
+                params.append(tx_hash)
+                
+            params.append(settlement_id)
+            
             await db.execute(
-                """
-                UPDATE settlements 
-                SET status = ?, tx_hash = ?, confirmed_at = ?
-                WHERE settlement_id = ?
-                """,
-                (status, tx_hash, confirmed_at, settlement_id),
+                f"UPDATE settlements SET {', '.join(updates)} WHERE settlement_id = ?",
+                tuple(params),
             )
             await db.commit()
-        logger.info(f"Updated settlement {settlement_id} status to {status}")
 
 
 # Global database instance

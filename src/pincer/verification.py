@@ -21,6 +21,7 @@ from src.config import config
 from src.database import db
 from src.logging_utils import get_logger
 from src.models import (
+    Coupon,
     PaymentVerificationRequest,
     PaymentVerificationResponse,
     SponsoredOffer,
@@ -175,18 +176,32 @@ class PincerFacilitator:
                 sponsors = []
                 try:
                     # MVP: In a real system, we'd select based on user profile/context
-                    campaign = await db.get_campaign(config.sponsor_campaign_id)
+                    # Get active campaigns from DB (MVP: just take the first one)
+                    campaigns = await db.get_active_campaigns()
+                    if campaigns:
+                        campaign = campaigns[0]
+                    else:
+                        campaign = None
                     
-                    if campaign and campaign.active and campaign.remaining_budget_usd >= campaign.rebate_amount_usd:
-                        # Create sponsored offer
+                    if campaign and campaign.active and campaign.budget_remaining >= campaign.rebate_amount:
+                        # Generate unique offer ID
+                        offer_id = f"off-{uuid.uuid4().hex[:8]}"
+                        
+                        # Determine rebate network based on payment or use campaign default
+                        rebate_network = str(requirements.network) if requirements.network else campaign.rebate_network
+                        
+                        # Create sponsored offer with trackable checkout URL
                         offer = SponsoredOffer(
                             sponsor_id=campaign.campaign_id,
                             merchant_name=campaign.merchant_name,
                             offer_text=campaign.offer_text,
-                            rebate_amount=f"${campaign.rebate_amount_usd:.2f}",
-                            merchant_url=config.merchant_url,
+                            rebate_amount=campaign.rebate_amount,
+                            rebate_asset=campaign.rebate_asset,
+                            rebate_network=rebate_network,
+                            coupons=campaign.coupons or [],
+                            checkout_url=f"{config.merchant_url}/checkout?session_id={request.session_id}&offer_id={offer_id}",
                             session_id=request.session_id,
-                            offer_id=f"off-{uuid.uuid4().hex[:8]}",
+                            offer_id=offer_id,
                         )
                         sponsors.append(offer)
                         logger.info(f"Injected sponsor offer: {offer.offer_id}")
@@ -199,7 +214,7 @@ class PincerFacilitator:
                     session_id=request.session_id,
                     user_address=response.payer,
                     network=str(requirements.network) if requirements.network else EVM_NETWORK,
-                    amount_usd=config.content_price_usd,
+                    amount=config.content_price_usd,
                     sponsors=sponsors,
                 )
             else:

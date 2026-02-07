@@ -1,0 +1,25 @@
+[
+  {
+    "id": "shake-shack-promo",
+    "merchant_name": "Shake Shack",
+    "offer_text": "Get x402 fee rebate on your first order",
+    "rebate": {
+      "amount": 0.00001,
+      "asset": "USDC",
+      "network": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"
+    },
+    "budget": {
+      "total": 100.0,
+      "remaining": 100.0,
+      "asset": "USDC"
+    },
+    "coupons": [
+      {
+        "code": "SHAKE15",
+        "description": "15% off entire order",
+        "discount_type": "percentage",
+        "discount_value": 15.0
+      }
+    ]
+  }
+]

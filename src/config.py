@@ -79,12 +79,8 @@ class Config(BaseSettings):
         description="Base Sepolia USDC address",
     )
 
-    # Sponsor Campaign Configuration (MVP - hardcoded)
-    sponsor_campaign_id: str = Field(default="shake-shack-promo")
-    sponsor_merchant_name: str = Field(default="Shake Shack")
-    sponsor_offer_text: str = Field(default="Get $5.00 cashback on your first order")
-    sponsor_rebate_amount_usd: float = Field(default=5.00)
-    sponsor_total_budget_usd: float = Field(default=100.00)
+    # Sponsor Campaign Configuration (JSON source)
+    sponsor_data_path: str = Field(default="src/data/campaigns.json")
 
     class Config:
         env_file = ".env"
