@@ -134,7 +134,6 @@ async def main():
                 # Parse response
                 data = response.json()
                 restaurants = data.get("restaurants", [])
-                sponsored_offers = data.get("sponsored_offers", [])
                 session_id = data.get("session_id")
 
                 print(f"\n📋 Received {len(restaurants)} restaurant recommendations")
@@ -150,76 +149,6 @@ async def main():
                 except ValueError:
                     print("\n💳 Payment completed (no settlement response in headers)")
 
-                # ====================================================================
-                # PHASE B: Sponsored Offers
-                # ====================================================================
-                if sponsored_offers:
-                    print_section("Phase B: Sponsored Offers Received")
-
-                    print(f"🎁 Received {len(sponsored_offers)} sponsored offer(s):\n")
-
-                    for i, offer in enumerate(sponsored_offers, 1):
-                        print(f"   Offer {i}:")
-                        print(f"      Merchant: {offer['merchant_name']}")
-                        print(f"      Offer: {offer['offer_text']}")
-                        print(f"      Rebate: {offer['rebate_amount']}")
-                        print(f"      Session ID: {offer['session_id']}")
-                        print()
-
-                    print("📍 User selects offer: Shake Shack\n")
-                    selected_offer = sponsored_offers[0]
-
-                    # ====================================================================
-                    # PHASE C: Merchant Conversion and Rebate
-                    # ====================================================================
-                    print_section("Phase C: Merchant Purchase and Rebate Settlement")
-
-                    print("📍 Step 1: User proceeds to merchant checkout\n")
-                    print(f"   🍔 Merchant: {selected_offer['merchant_name']}")
-                    print(f"   💰 Order amount: $25.00")
-                    print(f"   🎟️  Session ID: {selected_offer['session_id']}\n")
-
-                    # Simulate merchant checkout
-                    async with httpx.AsyncClient() as merchant_client:
-                        checkout_response = await merchant_client.post(
-                            f"{config.merchant_url}/checkout",
-                            json={
-                                "session_id": selected_offer['session_id'],
-                                "user_address": user_address,
-                                "purchase_amount_usd": 25.00,
-                            },
-                            headers={"X-Correlation-Id": correlation_id},
-                        )
-
-                        if checkout_response.status_code == 200:
-                            checkout_data = checkout_response.json()
-                            print("✅ Checkout completed!")
-                            print(f"   Order ID: {checkout_data['order_id']}")
-                            print(f"   Webhook sent: {checkout_data['webhook_sent']}")
-                            print(f"   Webhook ID: {checkout_data['webhook_id']}\n")
-
-                            print("📍 Step 2: Waiting for rebate settlement...\n")
-                            print("   ⏳ Pincer is processing the conversion webhook...")
-                            print("   🔒 Verifying: idempotency, anti-replay, budget")
-                            print("   💸 Initiating rebate transfer\n")
-
-                            # Wait a moment for webhook processing
-                            await asyncio.sleep(2)
-
-                            print(f"✅ Rebate should be settled!")
-                            print(f"   💵 Amount: {selected_offer['rebate_amount']}")
-                            print(f"   👛 To: {user_address}")
-                            print(f"   🔗 Network: {network_used}")
-                            print("\n   Note: Check Pincer service logs for transaction hash")
-
-                        else:
-                            print(f"❌ Checkout failed: {checkout_response.status_code}")
-                            print(checkout_response.text)
-
-                else:
-                    print("\n❌ No sponsored offers received")
-                    print("   This might happen if campaign budget is exhausted")
-
             else:
                 print(f"\n❌ Payment failed: HTTP {response.status_code}")
                 print(response.text)
@@ -229,16 +158,10 @@ async def main():
         # ====================================================================
         print_section("✨ Demo Complete")
         print("End-to-end flow demonstrated:")
-        print("  ✅ Phase A: x402 paywalled content access")
-        print("  ✅ Phase B: Sponsored offer injection")
-        print("  ✅ Phase C: Merchant conversion and rebate settlement")
+        print("  ✅ Phase A: x402 paywalled content access with Pincer as facilitator")
         print(f"\n📊 Correlation ID: {correlation_id}")
         print("\nTo verify:")
         print("  1. Check logs across all services for this correlation ID")
-        # Only show database query if payment succeeded
-        if response.is_success and 'session_id' in locals():
-            print("  2. Query database for settlement record:")
-            print(f"     sqlite3 pincer.db \"SELECT * FROM settlements WHERE session_id='{session_id}';\"")
         print("\n")
 
 

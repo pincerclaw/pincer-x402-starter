@@ -26,11 +26,9 @@ from src.logging_utils import (
 )
 from src.models import (
     ConversionWebhook,
-    OfferGenerationRequest,
     PaymentVerificationRequest,
 )
 
-from src.pincer.offers import offer_engine
 from src.pincer.payout import payout_engine
 from src.pincer.verification import pincer_facilitator, verifier
 from src.pincer.webhooks import WebhookHandler
@@ -127,36 +125,6 @@ async def get_supported():
         logger.error(f"Supported error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/offers")
-async def generate_offers(
-    request: OfferGenerationRequest,
-    x_correlation_id: str = Header(None),
-):
-    """Generate sponsored offers for a verified payment session.
-
-    This endpoint is called by TopEats after payment verification succeeds.
-    It generates offers based on available sponsor campaigns and budgets.
-
-    Args:
-        request: Offer generation request.
-        x_correlation_id: Optional correlation ID from header.
-
-    Returns:
-        Offer generation response with list of offers.
-    """
-    correlation_id = x_correlation_id or request.correlation_id
-    with CorrelationIdContext(correlation_id):
-        logger.info(f"Offer generation request for session {request.session_id}")
-
-        try:
-            response = await offer_engine.generate_offers(request)
-            logger.info(f"Generated {len(response.offers)} offers for {request.session_id}")
-            return response
-
-        except Exception as e:
-            logger.error(f"Error generating offers: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/webhooks/conversion")

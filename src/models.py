@@ -106,19 +106,3 @@ class PaymentVerificationResponse(BaseModel):
     amount_usd: Optional[float] = None
     error: Optional[str] = None
 
-
-class OfferGenerationRequest(BaseModel):
-    """Request to generate sponsored offers for a verified session."""
-
-    session_id: str
-    user_address: str
-    network: str
-    amount_paid_usd: float
-    correlation_id: Optional[str] = None
-
-
-class OfferGenerationResponse(BaseModel):
-    """Response containing generated offers."""
-
-    offers: list[SponsoredOffer]
-    session_id: str

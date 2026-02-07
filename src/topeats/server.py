@@ -9,7 +9,6 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-import httpx
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
@@ -19,9 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
     CorrelationIdContext,
-    get_correlation_id,
     get_logger,
-    set_correlation_id,
     setup_logging,
 )
 from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
@@ -55,23 +52,10 @@ class Restaurant(BaseModel):
     description: str
 
 
-class SponsoredOffer(BaseModel):
-    """Sponsored offer from Pincer."""
-
-    sponsor_id: str
-    merchant_name: str
-    offer_text: str
-    rebate_amount: str
-    merchant_url: str
-    session_id: str
-    offer_id: str
-
-
 class RecommendationsResponse(BaseModel):
-    """Response containing restaurant recommendations and optional sponsored offers."""
+    """Response containing restaurant recommendations."""
 
     restaurants: list[Restaurant]
-    sponsored_offers: list[SponsoredOffer] = []
     session_id: Optional[str] = None
 
 
@@ -166,51 +150,6 @@ logger.info(f"Configured payment routes: {list(routes.keys())}")
 app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
 
 
-async def fetch_sponsored_offers(session_id: str, user_address: str, network: str) -> list[SponsoredOffer]:
-    """Fetch sponsored offers from Pincer service after payment verification.
-
-    Args:
-        session_id: Payment session ID.
-        user_address: User wallet address.
-        network: Network identifier.
-
-    Returns:
-        List of sponsored offers.
-    """
-    try:
-        correlation_id = get_correlation_id()
-        logger.info(
-            f"Fetching sponsored offers for session {session_id} from Pincer service"
-        )
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{config.pincer_url}/offers",
-                json={
-                    "session_id": session_id,
-                    "user_address": user_address,
-                    "network": network,
-                    "amount_paid_usd": config.content_price_usd,
-                    "correlation_id": correlation_id,
-                },
-                timeout=10.0,
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                offers = [SponsoredOffer(**offer) for offer in data.get("offers", [])]
-                logger.info(f"Received {len(offers)} sponsored offers from Pincer")
-                return offers
-            else:
-                logger.warning(
-                    f"Failed to fetch offers from Pincer: {response.status_code} - {response.text}"
-                )
-                return []
-
-    except Exception as e:
-        logger.error(f"Error fetching sponsored offers: {e}", exc_info=True)
-        return []
-
 
 @app.get("/health")
 async def health_check() -> dict[str, str]:
@@ -223,11 +162,10 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
     """Get premium restaurant recommendations (protected by x402 payment).
 
     This endpoint requires payment via x402. After payment verification,
-    it returns restaurant recommendations and may include sponsored offers
-    from Pincer.
+    it returns restaurant recommendations.
 
     Returns:
-        RecommendationsResponse with restaurants and optional sponsored offers.
+        RecommendationsResponse with restaurants.
     """
     # Extract correlation ID from headers or generate one
     correlation_id = request.headers.get("x-correlation-id")
@@ -237,54 +175,20 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
     with CorrelationIdContext(correlation_id):
         logger.info("Processing recommendations request")
 
+        session_id = f"sess-{uuid.uuid4().hex[:12]}"
+
         # Check if payment was verified (set by middleware)
         payment_payload = getattr(request.state, "payment_payload", None)
 
-        session_id = f"sess-{uuid.uuid4().hex[:12]}"
-        sponsored_offers = []
-
         if payment_payload:
-            # Payment was verified, try to fetch sponsored offers
             logger.info(f"Payment verified, session_id: {session_id}")
-
-            # Extract user address from payment payload
-            # This varies by network/scheme, so we need to handle both
-            user_address = None
-            network = None
-
-            try:
-                # Try to extract from payment payload
-                if hasattr(payment_payload, "from_address"):
-                    user_address = payment_payload.from_address
-                elif hasattr(payment_payload, "from"):
-                    user_address = payment_payload.from_
-                elif isinstance(payment_payload, dict):
-                    user_address = payment_payload.get("from") or payment_payload.get("from_address")
-
-                # Try to extract network
-                if hasattr(payment_payload, "network"):
-                    network = payment_payload.network
-                elif isinstance(payment_payload, dict):
-                    network = payment_payload.get("network")
-
-                if user_address and network:
-                    sponsored_offers = await fetch_sponsored_offers(session_id, user_address, network)
-                else:
-                    logger.warning("Could not extract user_address or network from payment_payload")
-
-            except Exception as e:
-                logger.error(f"Error extracting payment info: {e}", exc_info=True)
 
         response = RecommendationsResponse(
             restaurants=SAMPLE_RESTAURANTS,
-            sponsored_offers=sponsored_offers,
             session_id=session_id,
         )
 
-        logger.info(
-            f"Returning {len(response.restaurants)} restaurants "
-            f"and {len(response.sponsored_offers)} offers"
-        )
+        logger.info(f"Returning {len(response.restaurants)} restaurants")
 
         return response
 
