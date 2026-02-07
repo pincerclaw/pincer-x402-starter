@@ -35,6 +35,12 @@ from src.pincer.webhooks import WebhookHandler
 
 
 # Pydantic models for x402 facilitator endpoints
+class X402VerifyRequest(BaseModel):
+    """x402 library standard verify request format."""
+    x402Version: int = 2
+    paymentPayload: dict  # camelCase from x402 library
+    paymentRequirements: dict  # camelCase from x402 library
+
 class SettleRequest(BaseModel):
     """Settle endpoint request body."""
     paymentPayload: dict
@@ -73,21 +79,41 @@ async def health_check() -> dict:
 
 
 @app.post("/verify")
-async def verify_payment(request: PaymentVerificationRequest):
+async def verify_payment(request: X402VerifyRequest):
     """Verify an x402 payment.
 
-    This is a standard x402 facilitator endpoint. It ONLY verifies payment
-    validity and does not involve sponsorship logic.
+    This is a standard x402 facilitator endpoint. Accepts the standard x402 library
+    format and converts to internal format.
 
     Args:
-        request: Payment verification request.
+        request: x402 verify request with paymentPayload and paymentRequirements.
 
     Returns:
-        Payment verification response.
+        Payment verification response in x402 format.
     """
-    logger.info(f"Payment verification request for session {request.session_id}")
-    response = await verifier.verify_payment(request)
-    return response
+    import uuid
+    
+    # Generate session_id from request data for tracking
+    session_id = f"sess-{uuid.uuid4().hex[:12]}"
+    
+    logger.info(f"Payment verification request, session: {session_id}")
+    
+    # Convert x402 format to internal format
+    internal_request = PaymentVerificationRequest(
+        session_id=session_id,
+        payment_payload=request.paymentPayload,
+        payment_requirements=request.paymentRequirements,
+    )
+    
+    response = await verifier.verify_payment(internal_request)
+    
+    # Return in x402 library expected format
+    return {
+        "isValid": response.verified,
+        "invalidReason": response.error if not response.verified else None,
+        "payer": response.user_address,
+        "sponsors": [s.model_dump() for s in response.sponsors] if response.sponsors else [],
+    }
 
 
 @app.post("/settle")

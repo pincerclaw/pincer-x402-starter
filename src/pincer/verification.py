@@ -11,6 +11,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
+from eth_account import Account
 from solders.keypair import Keypair
 
 # Add parent to path
@@ -83,43 +84,52 @@ class PincerFacilitator:
         evm_configured = False
         svm_configured = False
 
-        # Initialize EVM signer if treasury key is configured
-        if config.treasury_evm_private_key and config.treasury_evm_private_key.strip():
-            try:
-                evm_rpc_url = config.evm_rpc_url
-                evm_signer = FacilitatorWeb3Signer(
-                    private_key=config.treasury_evm_private_key,
-                    rpc_url=evm_rpc_url,
-                )
-                logger.info(f"EVM Facilitator account: {evm_signer.get_addresses()[0]}")
+        # Initialize EVM signer
+        evm_key = config.treasury_evm_private_key
+        if not evm_key or not evm_key.strip():
+            logger.warning("TREASURY_EVM_PRIVATE_KEY not set - generating temporary key for demo")
+            evm_key = Account.create().key.hex()
 
-                register_exact_evm_facilitator(
-                    self.facilitator,
-                    evm_signer,
-                    networks=EVM_NETWORK,
-                    deploy_erc4337_with_eip6492=True,
-                )
-                logger.info(f"Registered EVM scheme for {EVM_NETWORK}")
-                evm_configured = True
-            except Exception as e:
-                logger.warning(f"Failed to initialize EVM signer: {e}")
+        try:
+            evm_rpc_url = config.evm_rpc_url
+            evm_signer = FacilitatorWeb3Signer(
+                private_key=evm_key,
+                rpc_url=evm_rpc_url,
+            )
+            logger.info(f"EVM Facilitator account: {evm_signer.get_addresses()[0]}")
 
-        # Initialize SVM signer if treasury key is configured
-        if config.treasury_svm_private_key and config.treasury_svm_private_key.strip():
-            try:
-                svm_keypair = Keypair.from_base58_string(config.treasury_svm_private_key)
-                svm_signer = FacilitatorKeypairSigner(svm_keypair)
-                logger.info(f"SVM Facilitator account: {svm_signer.get_addresses()[0]}")
+            register_exact_evm_facilitator(
+                self.facilitator,
+                evm_signer,
+                networks=EVM_NETWORK,
+                deploy_erc4337_with_eip6492=True,
+            )
+            logger.info(f"Registered EVM scheme for {EVM_NETWORK}")
+            evm_configured = True
+        except Exception as e:
+            logger.warning(f"Failed to initialize EVM signer: {e}")
 
-                register_exact_svm_facilitator(
-                    self.facilitator,
-                    svm_signer,
-                    networks=SVM_NETWORK,
-                )
-                logger.info(f"Registered SVM scheme for {SVM_NETWORK}")
-                svm_configured = True
-            except Exception as e:
-                logger.warning(f"Failed to initialize SVM signer: {e}")
+        # Initialize SVM signer
+        svm_key = config.treasury_svm_private_key
+        if not svm_key or not svm_key.strip():
+            logger.warning("TREASURY_SVM_PRIVATE_KEY not set - generating temporary key for demo")
+            svm_keypair = Keypair()
+        else:
+            svm_keypair = Keypair.from_base58_string(svm_key)
+
+        try:
+            svm_signer = FacilitatorKeypairSigner(svm_keypair)
+            logger.info(f"SVM Facilitator account: {svm_signer.get_addresses()[0]}")
+
+            register_exact_svm_facilitator(
+                self.facilitator,
+                svm_signer,
+                networks=SVM_NETWORK,
+            )
+            logger.info(f"Registered SVM scheme for {SVM_NETWORK}")
+            svm_configured = True
+        except Exception as e:
+            logger.warning(f"Failed to initialize SVM signer: {e}")
 
         # Warn if no networks are configured
         if not evm_configured and not svm_configured:

@@ -1,1 +1,1 @@
-"""TopEats package - Paywalled content server."""
+"""Resource Server package - Paywalled content server."""
