@@ -51,11 +51,7 @@ class Config(BaseSettings):
     merchant_port: int = Field(default=4023)
     merchant_url: str = Field(default="http://localhost:4023")
 
-    # x402 Facilitator (deprecated - Pincer IS the facilitator now)
-    facilitator_url: str = Field(
-        default="",
-        description="Optional external facilitator URL (no longer needed - Pincer is its own facilitator)",
-    )
+
 
     # Webhook Security
     webhook_secret: str = Field(

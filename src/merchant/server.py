@@ -7,6 +7,8 @@ import hashlib
 import hmac
 import sys
 import uuid
+import json
+import asyncio
 from datetime import datetime
 from pathlib import Path
 
@@ -91,7 +93,6 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
     )
 
     # Simulate payment processing delay
-    import asyncio
     await asyncio.sleep(0.5)
 
     # Prepare webhook payload
@@ -106,7 +107,6 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
     }
 
     # Convert to JSON string for signing
-    import json
     payload_str = json.dumps(webhook_payload)
 
     # Create HMAC signature

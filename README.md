@@ -1,207 +1,214 @@
 # Pincer x402 Reference Implementation
 
-A production-quality reference implementation of Pincer's x402-sponsored access flow, demonstrating post-pay settlement for paywalled content.
+**The standard implementation for Pincer's x402-sponsored access protocol.**
 
-## Overview
+This project demonstrates a complete, production-ready flow where content access acts as a lead generation mechanism for sponsors. Instead of users paying for content directly, sponsors subsidize the cost in exchange for high-intent leads, with settlement occurring on-chain.
 
-This project implements a complete x402 payment flow with Pincer acting as the facilitator.
+---
 
-1. **Paywalled Resource**: User accesses content protected by x402 (formerly TopEats).
-2. **Pincer Facilitator**: Handles payment verification and settlement.
-3. **Sponsorship Model**: Demonstrates how sponsors can subsidize content access via rebates.
+## 🚀 Quick Start
 
-## Architecture
+The fastest way to get the demo running.
 
-The system consists of 4 main components interacting to provide a seamless paid content experience with sponsored rebates.
+### 1. Prerequisites
+
+- **Python 3.10+**
+- **[uv](https://github.com/astral-sh/uv)** (Fast Python package installer)
+  ```bash
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  ```
+
+### 2. Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/pincerclaw/pincer-x402-starter.git
+cd pincer-x402-starter
+
+# Run the setup script (installs dependencies, sets up virtualenv)
+./scripts/setup_uv.sh
+```
+
+### 3. Configuration
+
+Copy the example environment file and add your wallet keys:
+
+```bash
+cp .env.example .env
+nano .env
+```
+
+> **Required:** Set `TREASURY_SVM_PRIVATE_KEY` (Solana) or `TREASURY_EVM_PRIVATE_KEY` (Base) to enable real on-chain settlement. If left blank, the system runs in **Simulation Mode**.
+
+### 4. Run the Demo
+
+Open 4 terminal windows to simulate the distributed system:
+
+**Terminal 1: Resource Server (Port 4021)**
+_The content provider (e.g., "TopEats")_
+
+```bash
+uv run python src/resource/server.py
+```
+
+**Terminal 2: Pincer Service (Port 4022)**
+_The facilitator & sponsorship engine_
+
+```bash
+uv run python src/pincer/server.py
+```
+
+**Terminal 3: Merchant Server (Port 4023)**
+_The sponsor (e.g., "Shake Shack")_
+
+```bash
+uv run python src/merchant/server.py
+```
+
+**Terminal 4: Agent Client**
+_The user/agent requesting content_
+
+```bash
+uv run python src/agent/demo.py
+```
+
+---
+
+## 🔄 Architecture Flow
+
+How the components interact to deliver sponsored free access.
 
 ```mermaid
 sequenceDiagram
     participant User as Agent/User
     participant Resource as Resource Server
     participant Pincer as Pincer (Facilitator)
-    participant Merchant as Merchant (Shake Shack)
+    participant Merchant as Merchant (Sponsor)
 
-    Note over User, Resource: Phase A: Paywalled Access
-    User->>Resource: 1. GET /recommendations
-    Resource-->>User: 402 Payment Required (Price: $0.10)
+    Note over User, Resource: Phase 1: Access & Sponsorship
+    User->>Resource: 1. Request Content (GET /recommendations)
+    Resource-->>User: 402 Payment Required + Quote
 
-    User->>User: 2. Approve Payment
-    User->>Resource: 3. GET /recommendations + Payment Proof
+    User->>User: 2. Sign Payment Proof (Off-chain)
+    User->>Resource: 3. Resubmit with Proof
 
-    Resource->>Pincer: 4. Verify Payment
-    Pincer-->>Resource: Verified + Session ID + Sponsors
+    Resource->>Pincer: 4. Verify Payment Integrity
+    Pincer-->>Resource: Valid + Inject Sponsor Offers
 
-    Resource-->>User: 200 OK (Content + Sponsors)
+    Resource-->>User: 200 OK (Content + Sponsor Offers)
 
-    Note over User, Merchant: Phase B: Commerce & Rebate
-    User->>Merchant: 5. Purchase ($25.00) + Session ID
+    Note over User, Merchant: Phase 2: Conversion & Rebate
+    User->>Merchant: 5. Transact with Sponsor (using Session ID)
     Merchant-->>User: Order Confirmed
 
-    Merchant->>Pincer: 6. Webhook (Conversion)
-    Pincer->>Pincer: 7. Validate & Check Budget
-    Pincer->>User: 8. Send Rebate ($5.00)
+    Merchant->>Pincer: 6. Webhook: "Conversion Happened"
+    Pincer->>Pincer: 7. Validate Budget & Signature
+    Pincer->>User: 8. Send Rebate (On-chain Settlement)
 ```
 
-## Detailed Components
+---
+
+## 🛠️ Components
 
 ### 1. Resource Server (`src/resource/`)
 
-_Previously "TopEats"_
+Represents a premium API or content platform.
 
-- A generic wrapper for any paywalled content.
-- Protects endpoints using `x402-server` middleware.
-- Returns `402 Payment Required` with pricing details.
-- Validates payment proofs via Pincer Facilitator.
+- Protects endpoints with `x402` middleware.
+- Delegates payment verification to Pincer.
+- Enriches responses with Pincer-supplied sponsor offers.
 
-### 2. Pincer (`src/pincer/`)
+### 2. Pincer Service (`src/pincer/`)
 
-- **Facilitator**: Verifies x402 payments (`verification.py`).
-- **Settlement**: Manages rebates and payouts (`payout.py`).
-- **Webhooks**: Handles conversion events from merchants (`webhooks.py`).
+The core infrastructure.
 
-### 3. Merchant (`src/merchant/`)
+- **Facilitator**: Verifies x402 payment proofs.
+- **Sponsorship Engine**: Matches users with active campaigns.
+- **Settlement**: Listens for merchant webhooks and executes on-chain rebates (EVM/SVM).
 
-- A demo merchant server (e.g., Shake Shack).
-- Accepts orders with a `session_id`.
-- Sends signed webhooks to Pincer to trigger rebates.
+### 3. Merchant Server (`src/merchant/`)
 
-## API Reference
+Represents a sponsor's backend.
 
-### Resource Server (Port 4021)
+- Receives traffic via tracking links.
+- Reports conversions back to Pincer via signed webhooks.
 
-#### `GET /recommendations`
+### 4. Agent Client (`src/agent/`)
 
-Returns paywalled content.
+A reference implementation of a client utilizing the x402 protocol.
 
-**Response (402 Payment Required):**
+- Handles the 402 Challenge-Response flow automatically.
+- Manages wallet keys and signing.
 
-```http
-HTTP/1.1 402 Payment Required
-WWW-Authenticate: x402 scheme="exact", pay_to="...", price="0.1"
+---
+
+## 📚 API Reference
+
+### Resource: Get Recommendations
+
+`GET /recommendations`
+
+- **Headers**: `X-Correlation-Id` (optional)
+- **Response**:
+  ```json
+  {
+    "restaurants": [...],
+    "sponsors": [
+      {
+        "sponsor_id": "camp-123",
+        "merchant_name": "Shake Shack",
+        "offer_text": "Free Fries with Burger",
+        "rebate_amount": 5.0,
+        "rebate_asset": "USDC",
+        "checkout_url": "http://.../checkout?session_id=..."
+      }
+    ]
+  }
+  ```
+
+### Pincer: Merchant Webhook
+
+`POST /webhooks/conversion`
+For merchants to report successful conversions.
+
+- **Headers**: `X-Webhook-Signature` (HMAC-SHA256)
+- **Body**:
+  ```json
+  {
+    "webhook_id": "wh-uuid",
+    "sesson_id": "sess-uuid",
+    "timestamp": "2024-01-01T12:00:00Z",
+    "event_type": "purchase",
+    "data": { "amount": 25.0, "currency": "USD" }
+  }
+  ```
+
+---
+
+## ⚙️ Configuration
+
+Key environment variables in `.env`:
+
+| Variable                   | Description                                                  |
+| -------------------------- | ------------------------------------------------------------ |
+| `PINCER_URL`               | URL of the Pincer service (default: `http://localhost:4022`) |
+| `TREASURY_EVM_PRIVATE_KEY` | Private key for sending EVM rebates (Base)                   |
+| `TREASURY_SVM_PRIVATE_KEY` | Private key for sending SVM rebates (Solana)                 |
+| `WEBHOOK_SECRET`           | Shared secret for signing merchant webhooks                  |
+
+---
+
+## 🧪 Testing
+
+To verify the entire system from scratch:
+
+```bash
+# Run the end-to-end demo script
+uv run python scripts/test_payment.py
 ```
 
-**Response (200 OK):**
+_Note: Ensure all services are running before executing the test._
 
-```json
-{
-  "restaurants": [...],
-  "session_id": "sess-...",
-  "sponsors": [
-    {
-      "sponsor_id": "shake-shack-promo",
-      "offer_text": "Get $5.00 cashback...",
-      "rebate_amount": "$5.00"
-    }
-  ]
-}
-```
+---
 
-### Pincer (Port 4022)
-
-#### `POST /verify`
-
-Verifies an x402 payment proof. Used by Resource Server.
-
-**Request:**
-
-```json
-{
-  "payment_proof": "base64_encoded_proof",
-  "resource_id": "..."
-}
-```
-
-#### `GET /settle/{session_id}`
-
-Check settlement status for a session.
-
-#### `POST /webhooks/conversion`
-
-Endpoint for merchants to report conversions.
-
-**Request:**
-
-```json
-{
-  "webhook_id": "wh-...",
-  "session_id": "sess-...",
-  "amount_usd": 25.0
-}
-```
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.10+
-- `uv` (recommended) or `pip`
-
-### Setup
-
-1. **Clone & Install**
-
-   ```bash
-   git clone <repo>
-   cd pincer-x402-starter
-   ./scripts/setup_uv.sh
-   # Follow the interactive setup
-   ```
-
-2. **Configuration**
-   Edit `.env` with your wallet keys (Solana or EVM).
-
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Run Demo**
-   Open 4 terminal windows and run:
-
-   ```bash
-   # T1: Resource Server
-   uv run python src/resource/server.py
-
-   # T2: Pincer Service
-   uv run python src/pincer/server.py
-
-   # T3: Merchant Demo
-   uv run python src/merchant/server.py
-
-   # T4: Agent Client
-   uv run python src/agent/demo.py
-   ```
-
-   _Or use the launcher script:_
-
-   ```bash
-   ./scripts/start_service.sh
-   ```
-
-## Integration Guide
-
-### For Content Providers
-
-To protect your API with Pincer x402:
-
-1. Wrap your API with `x402-server`.
-2. Configure the Pincer Facilitator URL.
-3. Accept the `session_id` returned after verification to track user sessions.
-
-### For Merchants
-
-To offer rebates:
-
-1. Capture the `session_id` passed by the user during checkout.
-2. Send a signed webhook to Pincer's `/webhooks/conversion` endpoint.
-3. Pincer handles the payout to the user.
-
-## Project Structure
-
-```
-src/
-├── resource/    # Paywalled Content Server
-├── pincer/      # Facilitator & Settlement Logic
-├── merchant/    # Demo Merchant Server
-├── agent/       # Demo Client
-└── config.py    # Shared Configuration
-```
+**Pincer Protocol** - [pincer.App](https://pincer.app)

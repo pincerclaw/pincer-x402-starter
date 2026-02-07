@@ -76,7 +76,6 @@ class PayoutEngine:
         # 5. Wait for confirmation
         # 6. Return transaction hash
 
-        # Placeholder implementation (simulates success)
         if not config.treasury_evm_private_key:
             logger.warning(
                 "TREASURY_EVM_PRIVATE_KEY not configured - using simulation mode"
@@ -94,55 +93,17 @@ class PayoutEngine:
                 "simulated": True,
             }
 
-        # TODO: Full implementation
-        # from web3 import Web3
-        # from eth_account import Account
-        #
-        # # Connect to Base Sepolia
-        # w3 = Web3(Web3.HTTPProvider("https://sepolia.base.org"))
-        #
-        # # Load treasury account
-        # account = Account.from_key(config.treasury_evm_private_key)
-        #
-        # # USDC contract
-        # usdc_contract = w3.eth.contract(
-        #     address=config.evm_usdc_address,
-        #     abi=[...]  # ERC20 ABI
-        # )
-        #
-        # # Calculate amount (USDC has 6 decimals)
-        # amount_usdc = int(amount * 1_000_000)
-        #
-        # # Build transaction
-        # tx = usdc_contract.functions.transfer(
-        #     user_address,
-        #     amount_usdc
-        # ).build_transaction({
-        #     'from': account.address,
-        #     'nonce': w3.eth.get_transaction_count(account.address),
-        #     'gas': 100000,
-        #     'gasPrice': w3.eth.gas_price,
-        # })
-        #
-        # # Sign and send
-        # signed_tx = account.sign_transaction(tx)
-        # tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        #
-        # # Wait for confirmation
-        # receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
-        #
-        # return {
-        #     "status": "success",
-        #     "tx_hash": receipt.transactionHash.hex(),
-        #     "network": network,
-        #     "amount": amount,
-        #     "asset": asset,
-        # }
-
-        logger.warning("Full EVM payout implementation not yet complete")
+        # TODO: PRODUCTION IMPLEMENTATION
+        # 1. Connect to Web3 provider (e.g. Alchemy/Infura)
+        # 2. Load treasury account from private key
+        # 3. Construct ERC20 transfer transaction
+        # 4. Sign and broadcast transaction
+        # 5. Wait for confirmation
+        
+        logger.warning("Full EVM payout implementation not yet complete (requires Web3 provider)")
         return {
             "status": "error",
-            "error": "EVM payout not fully implemented",
+            "error": "EVM payout not fully implemented - configure keys or enable simulation",
         }
 
     async def _send_svm_rebate(
@@ -161,7 +122,6 @@ class PayoutEngine:
         """
         logger.info(f"Sending SVM rebate: {amount:.6f} {asset} to {user_address}")
 
-        # Placeholder implementation
         if not config.treasury_svm_private_key:
             logger.warning(
                 "TREASURY_SVM_PRIVATE_KEY not configured - using simulation mode"
@@ -179,11 +139,16 @@ class PayoutEngine:
                 "simulated": True,
             }
             
-        # TODO: integrate with solana-py for real transfers
-        logger.warning("Full SVM payout implementation not yet complete")
+        # TODO: PRODUCTION IMPLEMENTATION
+        # 1. Connect to Solana RPC
+        # 2. Load treasury keypair
+        # 3. Construct SPL Token transfer instruction
+        # 4. Sign and send transaction
+        
+        logger.warning("Full SVM payout implementation not yet complete (requires solana-py)")
         return {
             "status": "error",
-            "error": "SVM payout not fully implemented",
+            "error": "SVM payout not fully implemented - configure keys or enable simulation",
         }
 
 

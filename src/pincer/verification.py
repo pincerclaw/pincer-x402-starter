@@ -21,7 +21,6 @@ from src.config import config
 from src.database import db
 from src.logging_utils import get_logger
 from src.models import (
-    Coupon,
     PaymentVerificationRequest,
     PaymentVerificationResponse,
     SponsoredOffer,

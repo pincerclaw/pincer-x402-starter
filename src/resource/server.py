@@ -23,6 +23,7 @@ from src.logging_utils import (
     get_logger,
     setup_logging,
 )
+import httpx
 from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
 from x402.http.types import RouteConfig
@@ -108,7 +109,6 @@ SHAKE_SHACK = Restaurant(
 app = FastAPI(title="Resource Server", description="x402-protected resource server")
 
 
-# x402 Setup
 # x402 Setup
 logger.info("Initializing x402 facilitator client (Pincer)...")
 # Use Pincer URL as the facilitator URL since Pincer acts as the facilitator
@@ -196,7 +196,6 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
         
         # Always try to fetch sponsors from Pincer (x402 middleware doesn't pass custom data)
         try:
-            import httpx
             async with httpx.AsyncClient() as client:
                 pincer_response = await client.get(
                     f"{config.pincer_url}/sponsors/{session_id}",

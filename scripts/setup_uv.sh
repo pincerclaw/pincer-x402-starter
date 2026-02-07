@@ -62,5 +62,4 @@ echo "   Terminal 2: uv run python src/pincer/server.py"
 echo "   Terminal 3: uv run python src/merchant/server.py"
 echo "   Terminal 4: uv run python src/agent/demo.py"
 echo ""
-echo "📚 See docs/QUICKSTART_UV.md for detailed instructions"
-echo ""
+

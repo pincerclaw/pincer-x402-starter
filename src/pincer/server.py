@@ -9,6 +9,7 @@ Main FastAPI application integrating:
 
 import sys
 from pathlib import Path
+import uuid
 
 from fastapi import FastAPI, HTTPException, Header, Request
 from pydantic import BaseModel
@@ -27,6 +28,8 @@ from src.logging_utils import (
 from src.models import (
     ConversionWebhook,
     PaymentVerificationRequest,
+    Coupon,
+    SponsoredOffer,
 )
 
 from src.pincer.payout import payout_engine
@@ -91,7 +94,6 @@ async def verify_payment(request: X402VerifyRequest):
     Returns:
         Payment verification response in x402 format.
     """
-    import uuid
     
     # Generate session_id from request data for tracking
     session_id = f"sess-{uuid.uuid4().hex[:12]}"
@@ -165,7 +167,6 @@ async def get_sponsors(session_id: str):
     Returns:
         Dict with sponsors list
     """
-    import uuid
     try:
         # Get active campaigns from DB (MVP: just take the first one)
         campaigns = await db.get_active_campaigns()
@@ -179,7 +180,6 @@ async def get_sponsors(session_id: str):
             offer_id = f"off-{uuid.uuid4().hex[:8]}"
             
             # Create coupons
-            from src.models import Coupon, SponsoredOffer
             
             offer = SponsoredOffer(
                 sponsor_id=campaign.campaign_id,
