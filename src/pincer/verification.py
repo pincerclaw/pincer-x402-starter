@@ -7,6 +7,7 @@ Based on: https://github.com/coinbase/x402/blob/main/examples/python/facilitator
 """
 
 import sys
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -16,8 +17,13 @@ from solders.keypair import Keypair
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.config import config
+from src.database import db
 from src.logging_utils import get_logger
-from src.models import PaymentVerificationRequest, PaymentVerificationResponse
+from src.models import (
+    PaymentVerificationRequest,
+    PaymentVerificationResponse,
+    SponsoredOffer,
+)
 from x402 import x402Facilitator
 from x402.mechanisms.evm import FacilitatorWeb3Signer
 from x402.mechanisms.evm.exact import register_exact_evm_facilitator
@@ -154,12 +160,37 @@ class PincerFacilitator:
 
             if response.is_valid:
                 logger.info(f"Payment verified for session {request.session_id}, payer: {response.payer}")
+                
+                # Check for active sponsor campaign (MVP: hardcoded check)
+                sponsors = []
+                try:
+                    # MVP: In a real system, we'd select based on user profile/context
+                    campaign = await db.get_campaign(config.sponsor_campaign_id)
+                    
+                    if campaign and campaign.active and campaign.remaining_budget_usd >= campaign.rebate_amount_usd:
+                        # Create sponsored offer
+                        offer = SponsoredOffer(
+                            sponsor_id=campaign.campaign_id,
+                            merchant_name=campaign.merchant_name,
+                            offer_text=campaign.offer_text,
+                            rebate_amount=f"${campaign.rebate_amount_usd:.2f}",
+                            merchant_url=config.merchant_url,
+                            session_id=request.session_id,
+                            offer_id=f"off-{uuid.uuid4().hex[:8]}",
+                        )
+                        sponsors.append(offer)
+                        logger.info(f"Injected sponsor offer: {offer.offer_id}")
+                except Exception as e:
+                    logger.error(f"Failed to inject sponsor offer: {e}")
+                    # Don't fail verification if offer injection fails
+                
                 return PaymentVerificationResponse(
                     verified=True,
                     session_id=request.session_id,
                     user_address=response.payer,
                     network=str(requirements.network) if requirements.network else EVM_NETWORK,
                     amount_usd=config.content_price_usd,
+                    sponsors=sponsors,
                 )
             else:
                 logger.warning(f"Payment verification failed: {response.invalid_reason}")

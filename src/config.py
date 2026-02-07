@@ -39,9 +39,9 @@ class Config(BaseSettings):
     treasury_svm_private_key: str = Field(default="", description="Treasury Solana private key")
 
     # Service URLs and Ports
-    topeats_host: str = Field(default="0.0.0.0")
-    topeats_port: int = Field(default=4021)
-    topeats_url: str = Field(default="http://localhost:4021")
+    resource_host: str = Field(default="0.0.0.0")
+    resource_port: int = Field(default=4021)
+    resource_url: str = Field(default="http://localhost:4021")
 
     pincer_host: str = Field(default="0.0.0.0")
     pincer_port: int = Field(default=4022)
@@ -71,7 +71,7 @@ class Config(BaseSettings):
     log_format: Literal["json", "text"] = Field(default="json")
 
     # Payment Configuration
-    content_price_usd: float = Field(default=0.10, description="Price for TopEats content")
+    content_price_usd: float = Field(default=0.10, description="Price for paywalled content")
 
     # USDC Token Addresses
     evm_usdc_address: str = Field(
@@ -95,7 +95,7 @@ class Config(BaseSettings):
 config = Config()
 
 
-def validate_config_for_service(service: Literal["topeats", "pincer", "merchant", "agent"]) -> None:
+def validate_config_for_service(service: Literal["resource", "pincer", "merchant", "agent"]) -> None:
     """Validate that required configuration is present for a specific service.
 
     Args:
@@ -106,7 +106,7 @@ def validate_config_for_service(service: Literal["topeats", "pincer", "merchant"
     """
     errors = []
 
-    if service in ["topeats", "agent"]:
+    if service in ["resource", "agent"]:
         if not config.evm_address and not config.svm_address:
             errors.append("Either EVM_ADDRESS or SVM_ADDRESS must be set")
         if not config.evm_private_key and not config.svm_private_key:

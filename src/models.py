@@ -104,5 +104,6 @@ class PaymentVerificationResponse(BaseModel):
     user_address: Optional[str] = None
     network: Optional[str] = None
     amount_usd: Optional[float] = None
+    sponsors: list["SponsoredOffer"] = Field(default_factory=list, description="Sponsors (offers) unlocked by payment")
     error: Optional[str] = None
 

@@ -18,7 +18,7 @@ async def test_payment():
     
     print(f"SVM Address: {config.svm_address}")
     print(f"SVM Private Key (first 20 chars): {config.svm_private_key[:20]}...")
-    print(f"TopEats URL: {config.topeats_url}")
+    print(f"Resource URL: {config.resource_url}")
     print(f"Content Price: ${config.content_price_usd}\n")
     
     # Create client
@@ -33,7 +33,7 @@ async def test_payment():
     
     async with x402HttpxClient(client) as http:
         response = await http.get(
-            f"{config.topeats_url}/recommendations",
+            f"{config.resource_url}/recommendations",
             headers={"X-Debug": "true"},
         )
         await response.aread()

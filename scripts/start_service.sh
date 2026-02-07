@@ -8,7 +8,7 @@ echo "=========================="
 echo ""
 echo "請選擇要啟動的服務："
 echo ""
-echo "1) TopEats (Port 4021)"
+echo "1) Resource Server (Port 4021)"
 echo "2) Pincer (Port 4022)"
 echo "3) Merchant/Shake Shack (Port 4023)"
 echo "4) Agent Demo"
@@ -17,8 +17,8 @@ read -p "輸入選項 (1-4): " choice
 
 case $choice in
   1)
-    echo "🍽️  啟動 TopEats..."
-    uv run python src/topeats/server.py
+    echo "🍽️  啟動 Resource Server..."
+    uv run python src/resource/server.py
     ;;
   2)
     echo "⚡ 啟動 Pincer..."

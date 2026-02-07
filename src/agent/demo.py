@@ -61,7 +61,7 @@ async def main():
         # ====================================================================
         # PHASE A: Paywalled Content Access
         # ====================================================================
-        print_section("Phase A: Requesting Premium Content from TopEats")
+        print_section("Phase A: Requesting Paywalled Content")
 
         print("📍 Step 1: Initial request to /recommendations (no payment)\n")
 
@@ -69,7 +69,7 @@ async def main():
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    f"{config.topeats_url}/recommendations",
+                    f"{config.resource_url}/recommendations",
                     headers={"X-Correlation-Id": correlation_id},
                 )
 
@@ -123,7 +123,7 @@ async def main():
         # Make request with x402 client (automatically handles payment)
         async with x402HttpxClient(client) as http:
             response = await http.get(
-                f"{config.topeats_url}/recommendations",
+                f"{config.resource_url}/recommendations",
                 headers={"X-Correlation-Id": correlation_id},
             )
             await response.aread()
@@ -139,6 +139,15 @@ async def main():
                 print(f"\n📋 Received {len(restaurants)} restaurant recommendations")
                 for i, restaurant in enumerate(restaurants[:3], 1):
                     print(f"   {i}. {restaurant['name']} - {restaurant['cuisine']} ({'$' * restaurant['price_level']})")
+
+                # Print sponsors if available
+                sponsors = data.get("sponsors", [])
+                if sponsors:
+                    print(f"\n🎁 Received {len(sponsors)} sponsor offers:")
+                    for sponsor in sponsors:
+                        print(f"   - {sponsor['merchant_name']}: {sponsor['offer_text']} ({sponsor['rebate_amount']})")
+                    print(f"     Session: {session_id}")
+
 
                 # Extract payment response
                 try:
