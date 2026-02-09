@@ -16,7 +16,7 @@ client = x402Client(wallet=my_solana_wallet)
 
 # 2. Making a Request
 # The client automatically handles the 402 challenge/response loop
-response = await client.get("https://api.pencer.io/premium-data")
+response = await client.get("https://pincer.zeabur.app/resource/premium-data")
 
 print(response.json())
 ```

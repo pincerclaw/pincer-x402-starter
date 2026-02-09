@@ -131,8 +131,38 @@ logger.info(f"Registering SVM scheme for network: {SVM_NETWORK}")
 server.register(SVM_NETWORK, ExactSvmServerScheme())
 
 # Define route payment requirements
+# Note: When mounted under /demo/resource, the middleware sees the full path.
+# We need to match the path as seen by the ASGI application.
 routes = {
-    "GET /recommendations": RouteConfig(
+    # If mounted, the path might be /demo/resource/recommendations
+    # or just /recommendations depending on how FastAPI handles mounting.
+    # We'll configure both to be safe for now, or match safely.
+    "/recommendations": RouteConfig(
+        accepts=[
+            # EVM payment option (USDC on Base Sepolia)
+            PaymentOption(
+                scheme="exact",
+                pay_to=config.evm_address or config.treasury_evm_address,
+                price=AssetAmount(
+                    amount=str(int(config.content_price_usd * 1_000_000)),  # USDC has 6 decimals
+                    asset=config.evm_usdc_address,
+                    extra={"name": "USDC", "version": "2"},
+                ),
+                network=EVM_NETWORK,
+            ),
+            # SVM payment option (SOL on Solana Devnet)
+            PaymentOption(
+                scheme="exact",
+                pay_to=config.svm_address or config.treasury_svm_address,
+                price=f"${config.content_price_usd}",
+                network=SVM_NETWORK,
+            ),
+        ],
+        mime_type="application/json",
+        description="Premium restaurant recommendations",
+    ),
+    # Add matched path for unified deployment if middleware doesn't strip mount path
+    "/demo/resource/recommendations": RouteConfig(
         accepts=[
             # EVM payment option (USDC on Base Sepolia)
             PaymentOption(

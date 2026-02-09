@@ -27,17 +27,17 @@ async def main():
     await db.initialize()
 
     # Initialize default campaign
-    await db.initialize_default_campaign()
+    # Initialize campaigns from JSON
+    await db.initialize_campaigns()
 
-    # Verify campaign was created
-    campaign = await db.get_campaign(config.sponsor_campaign_id)
-    if campaign:
-        logger.info(f"Campaign initialized successfully:")
-        logger.info(f"  ID: {campaign.campaign_id}")
-        logger.info(f"  Merchant: {campaign.merchant_name}")
-        logger.info(f"  Budget: ${campaign.remaining_budget_usd:.2f}")
+    # Verify campaigns were created
+    campaigns = await db.get_active_campaigns()
+    if campaigns:
+        logger.info(f"Initialized {len(campaigns)} campaigns successfully.")
+        for campaign in campaigns:
+            logger.info(f"- {campaign.campaign_id}: {campaign.merchant_name} (${campaign.budget_remaining:.2f})")
     else:
-        logger.error("Failed to initialize campaign")
+        logger.error("Failed to initialize campaigns or no active campaigns found.")
         sys.exit(1)
 
     logger.info("Database initialization complete!")

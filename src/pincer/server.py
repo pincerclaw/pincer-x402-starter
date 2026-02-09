@@ -65,6 +65,28 @@ app = FastAPI(
 # Initialize webhook handler
 webhook_handler = WebhookHandler(payout_engine)
 
+# ==============================================================================
+# Unified Deployment: Mount Sub-Apps
+# ==============================================================================
+# Allows running the full demo stack in a single container.
+# In production, these would likely be separate services.
+
+# Mount Resource Server
+try:
+    from src.resource.server import app as resource_app
+    app.mount("/demo/resource", resource_app)
+    logger.info("Mounted /demo/resource (Resource Server)")
+except Exception as e:
+    logger.warning(f"Failed to mount Resource Server: {e}")
+
+# Mount Merchant Server
+try:
+    from src.merchant.server import app as merchant_app
+    app.mount("/demo/merchant", merchant_app)
+    logger.info("Mounted /demo/merchant (Merchant Server)")
+except Exception as e:
+    logger.warning(f"Failed to mount Merchant Server: {e}")
+
 
 @app.on_event("startup")
 async def startup():

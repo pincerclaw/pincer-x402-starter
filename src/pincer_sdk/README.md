@@ -22,7 +22,10 @@ Sellers use Pincer to verify x402 payments and identify active sponsors.
 from pincer_sdk import PincerClient
 from x402.server import x402ResourceServer
 
-client = PincerClient(base_url="https://api.pincer.xyz")
+client = PincerClient(
+    base_url="https://pincer.zeabur.app",  # URL is now required
+    api_key="your_api_key"
+)
 
 # Get a pre-configured facilitator for x402
 facilitator = client.facilitator()
@@ -50,7 +53,7 @@ Merchants notify Pincer when a transaction occurs to trigger user rebates.
 from pincer_sdk import PincerClient
 
 async with PincerClient(
-    base_url="https://api.pincer.xyz",
+    base_url="https://pincer.zeabur.app",  # URL is now required
     webhook_secret="your_secret"
 ) as pincer:
     await pincer.report_conversion(

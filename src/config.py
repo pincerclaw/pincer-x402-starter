@@ -39,17 +39,19 @@ class Config(BaseSettings):
     treasury_svm_private_key: str = Field(default="", description="Treasury Solana private key")
 
     # Service URLs and Ports
+    # In unified deployment (e.g. Docker), these are mounted under Pincer
+    # But for local dev (separate processes), we default to separate ports
     resource_host: str = Field(default="0.0.0.0")
     resource_port: int = Field(default=4021)
-    resource_url: str = Field(default="http://localhost:4021")
+    resource_url: str = Field(..., description="URL of the Resource server (Required)")
 
     pincer_host: str = Field(default="0.0.0.0")
     pincer_port: int = Field(default=4022)
-    pincer_url: str = Field(default="http://localhost:4022")
+    pincer_url: str = Field(..., description="URL of the Pincer facilitator (Required)")
 
     merchant_host: str = Field(default="0.0.0.0")
     merchant_port: int = Field(default=4023)
-    merchant_url: str = Field(default="http://localhost:4023")
+    merchant_url: str = Field(..., description="URL of the Merchant server (Required)")
 
 
 

@@ -49,34 +49,20 @@ nano .env
 
 ### 4. Run the Demo
 
-Open 4 terminal windows to simulate the distributed system:
-
-**Terminal 1: Resource Server (Port 4021)**
-_The content provider (e.g., "TopEats")_
+**Terminal 1: Start the Pincer Service (Unified)**
+_Runs the Resource, Merchant, and Pincer services in a single process._
 
 ```bash
-uv run python src/resource/server.py
+make start
+# Or manually: uv run python src/pincer/server.py --workers 4
 ```
 
-**Terminal 2: Pincer Service (Port 4022)**
-_The facilitator & sponsorship engine_
+**Terminal 2: Run the Demo Agent**
+_Simulates a user requesting content._
 
 ```bash
-uv run python src/pincer/server.py
-```
-
-**Terminal 3: Merchant Server (Port 4023)**
-_The sponsor (e.g., "Shake Shack")_
-
-```bash
-uv run python src/merchant/server.py
-```
-
-**Terminal 4: Agent Client**
-_The user/agent requesting content_
-
-```bash
-uv run python src/agent/demo.py
+make demo
+# Or manually: uv run python src/agent/demo.py
 ```
 
 ---
@@ -196,12 +182,14 @@ For merchants to report successful conversions.
 
 Key environment variables in `.env`:
 
-| Variable                   | Description                                                  |
-| -------------------------- | ------------------------------------------------------------ |
-| `PINCER_URL`               | URL of the Pincer service (default: `http://localhost:4022`) |
-| `TREASURY_EVM_PRIVATE_KEY` | Private key for sending EVM rebates (Base)                   |
-| `TREASURY_SVM_PRIVATE_KEY` | Private key for sending SVM rebates (Solana)                 |
-| `WEBHOOK_SECRET`           | Shared secret for signing merchant webhooks                  |
+| Variable                   | Description                                  |
+| -------------------------- | -------------------------------------------- |
+| `PINCER_URL`               | URL of the Pincer service (Required)         |
+| `RESOURCE_URL`             | URL of the Resource server (Required)        |
+| `MERCHANT_URL`             | URL of the Merchant server (Required)        |
+| `TREASURY_EVM_PRIVATE_KEY` | Private key for sending EVM rebates (Base)   |
+| `TREASURY_SVM_PRIVATE_KEY` | Private key for sending SVM rebates (Solana) |
+| `WEBHOOK_SECRET`           | Shared secret for signing merchant webhooks  |
 
 ---
 

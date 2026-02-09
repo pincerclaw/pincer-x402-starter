@@ -20,6 +20,7 @@ from pincer_sdk.facilitator import PincerFacilitatorClient
 from x402.server import x402ResourceServer
 
 # 1. Initialize Pincer Client
+# Uses PINCER_URL from env (e.g. https://pincer.zeabur.app)
 client = PincerClient(api_key="...")
 
 # 2. Create Server (Composition Pattern)

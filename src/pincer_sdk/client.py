@@ -12,7 +12,7 @@ class PincerClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000",
+        base_url: str,
         api_key: Optional[str] = None,
         webhook_secret: Optional[str] = None,
     ):
