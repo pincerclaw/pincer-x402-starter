@@ -1,8 +1,15 @@
 # Pincer x402 Reference Implementation
 
+[![Colosseum Agent Hackathon](https://img.shields.io/badge/Colosseum-Agent%20Hackathon-purple)](https://colosseum.com/agent-hackathon/projects/pincer-ad-protocol-for-ai-agents)
+
 **The standard implementation for Pincer's x402-sponsored access protocol.**
 
 This project demonstrates a complete, production-ready flow where content access acts as a lead generation mechanism for sponsors. Instead of users paying for content directly, sponsors subsidize the cost in exchange for high-intent leads, with settlement occurring on-chain.
+
+**Resources:**
+
+- [Product Demo](https://pincer-web.pages.dev/)
+- [Pitch Deck](https://pincer-pitch.pages.dev)
 
 ---
 
@@ -208,7 +215,3 @@ uv run python scripts/test_payment.py
 ```
 
 _Note: Ensure all services are running before executing the test._
-
----
-
-**Pincer Protocol** - [pincer.App](https://pincer.app)
