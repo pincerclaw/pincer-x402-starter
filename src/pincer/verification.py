@@ -211,10 +211,14 @@ class PincerFacilitator:
                     # MVP: In a real system, we'd select based on user profile/context
                     # Get active campaigns from DB (MVP: just take the first one)
                     campaigns = await db.get_active_campaigns()
+                    logger.info(f"DEBUG: Found {len(campaigns)} active campaigns in DB")
+                    
                     if campaigns:
                         campaign = campaigns[0]
+                        logger.info(f"DEBUG: Checking campaign {campaign.campaign_id}: active={campaign.active}, remaining={campaign.budget_remaining}, rebate={campaign.rebate_amount}")
                     else:
                         campaign = None
+                        logger.info("DEBUG: No active campaigns returned query")
                     
                     if campaign and campaign.active and campaign.budget_remaining >= campaign.rebate_amount:
                         # Generate unique offer ID
@@ -238,8 +242,11 @@ class PincerFacilitator:
                         )
                         sponsors.append(offer)
                         logger.info(f"Injected sponsor offer: {offer.offer_id}")
+                    else:
+                        if campaign:
+                            logger.warning(f"DEBUG: Campaign {campaign.campaign_id} skipped. Active: {campaign.active}, Budget: {campaign.budget_remaining} >= {campaign.rebate_amount}")
                 except Exception as e:
-                    logger.error(f"Failed to inject sponsor offer: {e}")
+                    logger.error(f"Failed to inject sponsor offer: {e}", exc_info=True)
                     # Don't fail verification if offer injection fails
                 
                 return PaymentVerificationResponse(

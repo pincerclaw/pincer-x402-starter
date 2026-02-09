@@ -103,8 +103,6 @@ def validate_config_for_service(service: Literal["resource", "pincer", "merchant
     if service in ["resource", "agent"]:
         if not config.evm_address and not config.svm_address:
             errors.append("Either EVM_ADDRESS or SVM_ADDRESS must be set")
-        if not config.evm_private_key and not config.svm_private_key:
-            errors.append("Either EVM_PRIVATE_KEY or SVM_PRIVATE_KEY must be set")
 
     if service == "pincer":
         if not config.treasury_evm_address and not config.treasury_svm_address:
