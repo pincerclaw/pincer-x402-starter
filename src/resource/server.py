@@ -16,7 +16,6 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.pincer_sdk.types import SponsoredOffer
-from src.pincer_sdk.resource import verification_var
 
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
@@ -158,9 +157,8 @@ routes = {
 logger.info(f"Configured payment routes: {list(routes.keys())}")
 
 
-# Add x402 middleware
-app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
-
+# Remove middleware to demonstrate manual verification flow detailed in Integration Guide
+# app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
 
 
 @app.get("/health")
@@ -189,40 +187,39 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
 
         session_id = f"sess-{uuid.uuid4().hex[:12]}"
 
-        # Connect to Pincer to verify payment status and get sponsors
-        # The x402 middleware has already verified the signature and basics
-        # Now we check with Pincer for double-spending and get sponsors
-        
-        # If we reach here, the x402 middleware has already verified payment
-        # Try to get verification data from ContextVar (set by PincerFacilitatorClient)
-        # This bypasses x402 middleware state issues
-        verification_data = verification_var.get()
-        
-        # Try to get sponsors from verification data (populated by x402 middleware -> Pincer)
-        sponsors = []
-        if verification_data and hasattr(verification_data, "sponsors") and verification_data.sponsors:
-            # verification_data.sponsors is likely a list of dicts or objects depending on x402 version
-            # We need to coerce them to SponsoredOffer
-            raw_sponsors = verification_data.sponsors
-            for s in raw_sponsors:
-                if isinstance(s, dict):
-                    sponsors.append(SponsoredOffer(**s))
-                elif isinstance(s, SponsoredOffer):
-                    sponsors.append(s)
-                else:
-                    # Best effort conversion
-                    try:
-                        sponsors.append(SponsoredOffer(**dict(s)))
-                    except:
-                        pass
+        # Manual Verification Flow
+        try:
+            # 1. Get payment configuration for this route
+            route_config = routes["GET /recommendations"]
             
-            logger.info(f"Got {len(sponsors)} sponsors from verification data")
+            # 2. Verify payment
+            # returns Union[Response, PaymentVerification]
+            # uses the 'server' instance created above
+            # We pass the list of PaymentOptions to force payment check if needed,
+            # or pass route_config directly now that SDK handles it.
+            response = await server.handle_request(request, route_config)
             
-            # Use the session ID from the first sponsor if available
-            # This is critical because Pincer generated this session ID and mapped it to the payment
-            if sponsors:
-                 session_id = sponsors[0].session_id
-                 logger.info(f"Using session ID from sponsor: {session_id}")
+            # If it returns a Response (e.g. 402 or 400), return it immediately to the client
+            from fastapi.responses import Response
+            if isinstance(response, Response):
+                return response
+                
+            # If we get here, payment is valid (response is the success object)
+            
+            # 3. Access Sponsors directly from the result (Simpler DX)
+            # New simplified DX: sponsors are attached to the verification result by PincerResourceServer
+            sponsors = getattr(response, "sponsors", [])
+            logger.info(f"Got {len(sponsors)} sponsors from verification result")
+        
+        except Exception as e:
+            logger.exception("Payment verification error")
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"error": "Payment verification failed", "details": str(e)}, status_code=500)
+            
+        if sponsors:
+            # Assuming all sponsors for a request share the same session_id (which they do in Pincer)
+            session_id = sponsors[0].session_id
+            logger.info(f"Using session ID from sponsor: {session_id}")
         else:
             # Fallback: try to fetch manually (though likely won't work if session mismatch)
             logger.warning("No sponsors in verification data, fetching with local session ID")
