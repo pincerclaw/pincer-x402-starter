@@ -30,6 +30,7 @@ jobs:
 
       - name: Run Tests
         run: |
+          uv sync --extra dev
           PYTHONPATH=. uv run pytest tests/sdk
 
   publish:
