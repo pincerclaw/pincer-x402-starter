@@ -1,0 +1,56 @@
+name: SDK CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/pincer_sdk/**"
+      - "tests/sdk/**"
+      - ".github/workflows/sdk-ci-cd.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/pincer_sdk/**"
+      - "tests/sdk/**"
+  release:
+    types: [published]
+
+jobs:
+  test:
+    name: Run SDK Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install
+
+      - name: Run Tests
+        run: |
+          PYTHONPATH=. uv run pytest tests/sdk
+
+  publish:
+    name: Publish to PyPI
+    needs: test
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for trusted publishing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build Package
+        run: |
+          cd src/pincer_sdk
+          uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: src/pincer_sdk/dist/

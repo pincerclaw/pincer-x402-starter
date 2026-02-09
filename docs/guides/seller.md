@@ -36,22 +36,27 @@ server = x402ResourceServer(facilitator)
 
 ## Step 2: Protect your Route (Middleware)
 
-The simplest way to protect your API is using the provided Middleware.
+The simplest way to protect your API is using the **Pincer SDK Middleware**.
 
 ```python
-from x402.http.middleware.fastapi import PaymentMiddlewareASGI
+from src.pincer_sdk.middleware import PincerPaymentMiddleware
 
 # 1. Define Routes & Costs
 routes = {
-    "GET /premium-data": [{
-        "amount": "10000",   # 0.01 USDC
-        "token": "USDC",
-        "network": "solana:devnet"
-    }]
+    "/premium-data": RouteConfig(
+        accepts=[
+            PaymentOption(
+                scheme="exact",
+                pay_to="0x...",
+                price="$0.01",
+                network="solana:mainnet"
+            )
+        ]
+    )
 }
 
 # 2. Add Middleware
-app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
+app.add_middleware(PincerPaymentMiddleware, routes=routes, server=server)
 
 # 3. Handle Request (Payment Verified)
 @app.get("/premium-data")
@@ -59,7 +64,7 @@ async def get_premium_data(request: Request):
     # If we reach here, payment is already verified!
 
     # 4. Access Active Sponsors (Rebates)
-    # The x402 middleware populates request.state.payment with verification data
+    # The Pincer middleware automatically populates sponsors
     payment = getattr(request.state, "payment", None)
     sponsors = getattr(payment, "sponsors", []) if payment else []
 

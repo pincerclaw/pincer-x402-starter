@@ -1,5 +1,7 @@
 # Pincer x402 Reference Implementation
 
+[![SDK CI/CD](https://github.com/pincerclaw/pincer-x402-starter/actions/workflows/sdk-ci-cd.yml/badge.svg)](https://github.com/pincerclaw/pincer-x402-starter/actions/workflows/sdk-ci-cd.yml)
+[![PyPI version](https://img.shields.io/pypi/v/pincer-sdk.svg)](https://pypi.org/project/pincer-sdk/)
 [![Colosseum Agent Hackathon](https://img.shields.io/badge/Colosseum-Agent%20Hackathon-purple)](https://colosseum.com/agent-hackathon/projects/pincer-ad-protocol-for-ai-agents)
 
 **The standard implementation for Pincer's x402-sponsored access protocol.**
@@ -107,9 +109,9 @@ sequenceDiagram
 
 Represents a premium API or content platform.
 
-- Protects endpoints with `x402` middleware.
-- Delegates payment verification to Pincer.
-- Enriches responses with Pincer-supplied sponsor offers.
+- Protects endpoints using the **Pincer SDK Middleware**.
+- Automatically delegates payment verification to Pincer.
+- Injects active sponsor offers directly into the application context.
 
 ### 2. Pincer Service (`src/pincer/`)
 
@@ -169,10 +171,12 @@ For merchants to report successful conversions.
   ```json
   {
     "webhook_id": "wh-uuid",
-    "sesson_id": "sess-uuid",
+    "session_id": "sess-uuid",
     "timestamp": "2024-01-01T12:00:00Z",
-    "event_type": "purchase",
-    "data": { "amount": 25.0, "currency": "USD" }
+    "user_address": "0x...",
+    "purchase_amount": 25.0,
+    "purchase_asset": "USD",
+    "merchant_id": "my-store"
   }
   ```
 

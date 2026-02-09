@@ -1,21 +1,3 @@
-# Sponsor Campaigns
-
-**Role**: You are a Brand or Advertiser. You want to sponsor user access to specific APIs in exchange for visibility.
-
-## The Rebate Mechanism
-
-Pincer allows "Post-Pay Rebates".
-
-1.  User pays for API access.
-2.  Pincer detects the transaction.
-3.  If it matches your Campaign, Pincer executes a **Rebate Transaction** back to the user.
-
-## Configuring a Campaign
-
-# Sponsor Campaigns
-
-**Role**: You are a Brand or Advertiser. You want to sponsor user access to specific APIs in exchange for visibility.
-
 ## The Rebate Mechanism
 
 Pincer allows **"Post-Pay Rebates"**:

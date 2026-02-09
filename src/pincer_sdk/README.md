@@ -16,26 +16,29 @@ pip install pincer-sdk
 
 ### 1. For Sellers: Protect your API
 
-Sellers use Pincer to verify x402 payments and identify active sponsors.
+Sellers use Pincer to verify x402 payments and identify active sponsors using the built-in middleware.
 
 ```python
-from pincer_sdk import PincerClient
+from src.pincer_sdk import PincerClient
+from src.pincer_sdk.middleware import PincerPaymentMiddleware
 from x402.server import x402ResourceServer
 
 client = PincerClient(
-    base_url="https://pincer.zeabur.app",  # URL is now required
+    base_url="https://your-pincer-url.com",
     api_key="your_api_key"
 )
 
-# Get a pre-configured facilitator for x402
-facilitator = client.facilitator()
-server = x402ResourceServer(facilitator)
+# Initialize standard x402 server with Pincer facilitator
+server = x402ResourceServer(client.facilitator())
+
+# Add Pincer middleware to your FastAPI app
+app.add_middleware(PincerPaymentMiddleware, routes=routes, server=server)
 
 # Your FastAPI route
 @app.get("/premium-data")
 async def get_data(request: Request):
-    # Payment is verified by x402 middleware
-    # Sponsors are injected into the request state by PincerFacilitator
+    # Payment is already verified here!
+    # Sponsors are automatically injected into the request state
     payment = getattr(request.state, "payment", None)
     sponsors = getattr(payment, "sponsors", []) if payment else []
 

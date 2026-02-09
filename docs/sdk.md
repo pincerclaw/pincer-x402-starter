@@ -1,8 +1,21 @@
 # SDK Reference
 
-## `MerchantClient`
+## `PincerPaymentMiddleware`
 
-The main interface for integrating Pincer payment protection into your API. Accessed via `client.merchant`.
+The recommended way to protect your API. It handles the x402 challenge-response loop and automatically injects Pincer-specific data (like `sponsors`).
+
+### Usage (FastAPI)
+
+```python
+from src.pincer_sdk.middleware import PincerPaymentMiddleware
+from x402.server import x402ResourceServer
+
+# ... initialize client and facilitator
+server = x402ResourceServer(facilitator)
+
+# Add middleware to your app
+app.add_middleware(PincerPaymentMiddleware, routes=routes, server=server)
+```
 
 ## `PincerFacilitatorClient`
 
@@ -11,28 +24,20 @@ A specialized `FacilitatorClient` that preserves Pincer-specific data (like `spo
 ### Usage
 
 ```python
-from pincer_sdk.facilitator import PincerFacilitatorClient
-from x402.server import x402ResourceServer
-
-# Standard Composition Pattern
-facilitator = PincerFacilitatorClient(client)
-server = x402ResourceServer(facilitator)
+# Standard way to get the facilitator from the client
+facilitator = client.facilitator()
 ```
 
-### `verify`
+### Accessing Sponsors
 
-Standard `x402` verify method, but captures the `sponsors` list into a `ContextVar`.
-
-```python
-async def verify(self, payload, requirements) -> PincerVerificationResponse
-```
-
-### `get_active_sponsors`
-
-Access the sponsors captured during the verification of the current request via the middleware context.
+After verification, you can access sponsors in your route handlers:
 
 ```python
-# Access via FastAPI request object (populated by x402 middleware)
-payment = getattr(request.state, "payment", None)
-sponsors = getattr(payment, "sponsors", []) if payment else []
+@app.get("/premium-data")
+async def get_data(request: Request):
+    # Populated by PincerPaymentMiddleware
+    payment = getattr(request.state, "payment", None)
+    sponsors = getattr(payment, "sponsors", []) if payment else []
+
+    return {"sponsors": sponsors, ...}
 ```
