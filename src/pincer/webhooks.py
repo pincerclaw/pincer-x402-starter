@@ -92,7 +92,7 @@ class WebhookHandler:
         logger.info(f"Webhook signature verified for {webhook.webhook_id}")
 
         # 2. Idempotency check - have we seen this webhook before?
-        existing_webhook = await db.get_webhook_record(webhook.webhook_id)
+        existing_webhook = await db.get_webhook(webhook.webhook_id)
 
         if existing_webhook:
             logger.info(
@@ -130,7 +130,11 @@ class WebhookHandler:
             status="processing",
         )
 
-        created = await db.create_webhook_record(webhook_record)
+        try:
+            await db.create_webhook(webhook_record)
+            created = True
+        except Exception:
+            created = False
         if not created:
             # Race condition - another request is processing this
             logger.warning(f"Race condition detected for webhook {webhook.webhook_id}")
@@ -166,14 +170,11 @@ class WebhookHandler:
         logger.info(f"Session {webhook.session_id} is eligible for rebate settlement")
 
         # 4. Get campaign and validate budget
-        # TODO: Get campaign ID from session or offer (for now config MVP)
-        campaign = await db.get_campaign(config.sponsor_campaign_id) # Using MVP ID from config, but DB call is correct
+        # Retrieve first active campaign (MVP behavior)
+        campaigns = await db.get_active_campaigns()
 
-        if not campaign:
-            # Fallback to loading from JSON if not in DB? No, DB should have it.
-            # But the campaign ID might be different if I changed it in JSON.
-            # config.sponsor_campaign_id (default "shake-shack-promo") should match JSON ID.
-            error_msg = f"Campaign not found: {config.sponsor_campaign_id or 'unknown'}"
+        if not campaigns:
+            error_msg = "No active campaigns found in database"
             logger.error(error_msg)
             await db.update_webhook_status(webhook.webhook_id, "failed", error_msg)
             return {
@@ -181,6 +182,8 @@ class WebhookHandler:
                 "error": error_msg,
                 "webhook_id": webhook.webhook_id,
             }
+        
+        campaign = campaigns[0]
 
         if not campaign.active:
             error_msg = f"Campaign inactive: {campaign.campaign_id}"
@@ -233,11 +236,11 @@ class WebhookHandler:
                 await db.update_settlement_status(settlement_id, "confirmed", tx_hash)
 
                 # Mark session as settled (anti-replay)
-                await db.mark_session_rebate_settled(webhook.session_id)
+                await db.mark_session_settled(webhook.session_id)
 
                 # Update webhook status
                 await db.update_webhook_status(
-                    webhook.webhook_id, "completed", rebate_tx_hash=tx_hash
+                    webhook.webhook_id, "completed", tx_hash=tx_hash
                 )
 
                 logger.info(

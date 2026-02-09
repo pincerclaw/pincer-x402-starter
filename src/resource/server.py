@@ -15,7 +15,8 @@ from pydantic import BaseModel
 # Add parent to path so we can import from src
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.models import SponsoredOffer
+from src.pincer_sdk.types import SponsoredOffer
+from src.pincer_sdk.resource import verification_var
 
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
@@ -24,13 +25,16 @@ from src.logging_utils import (
     setup_logging,
 )
 import httpx
-from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption
+# from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption  <-- Removed
+from x402.http import PaymentOption
 from x402.http.middleware.fastapi import PaymentMiddlewareASGI
 from x402.http.types import RouteConfig
 from x402.mechanisms.evm.exact import ExactEvmServerScheme
 from x402.mechanisms.svm.exact import ExactSvmServerScheme
 from x402.schemas import AssetAmount, Network
-from x402.server import x402ResourceServer
+# from x402.server import x402ResourceServer <-- Removed
+
+from src.pincer_sdk import PincerClient
 
 # Validate configuration
 validate_config_for_service("resource")
@@ -110,11 +114,11 @@ app = FastAPI(title="Resource Server", description="x402-protected resource serv
 
 
 # x402 Setup
-logger.info("Initializing x402 facilitator client (Pincer)...")
-# Use Pincer URL as the facilitator URL since Pincer acts as the facilitator
-facilitator_url = config.pincer_url
-facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=facilitator_url))
-server = x402ResourceServer(facilitator)
+logger.info("Initializing Pincer Client and x402 server...")
+pincer_client = PincerClient(base_url=config.pincer_url)
+
+# Create x402 server using SDK helper
+server = pincer_client.resource.create_x402_server()
 
 # Register payment schemes
 logger.info(f"Registering EVM scheme for network: {EVM_NETWORK}")
@@ -190,23 +194,43 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
         # Now we check with Pincer for double-spending and get sponsors
         
         # If we reach here, the x402 middleware has already verified payment
-        # Check request.state for verification data from the facilitator
-        verification_data = getattr(request.state, "payment_verification", None)
-        sponsors = []
+        # Try to get verification data from ContextVar (set by PincerFacilitatorClient)
+        # This bypasses x402 middleware state issues
+        verification_data = verification_var.get()
         
-        # Always try to fetch sponsors from Pincer (x402 middleware doesn't pass custom data)
-        try:
-            async with httpx.AsyncClient() as client:
-                pincer_response = await client.get(
-                    f"{config.pincer_url}/sponsors/{session_id}",
-                    timeout=5.0,
-                )
-                if pincer_response.status_code == 200:
-                    sponsors_data = pincer_response.json().get("sponsors", [])
-                    sponsors = [SponsoredOffer(**s) for s in sponsors_data]
-                    logger.info(f"Fetched {len(sponsors)} sponsors from Pincer")
-        except Exception as e:
-            logger.warning(f"Could not fetch sponsors from Pincer: {e}")
+        # Try to get sponsors from verification data (populated by x402 middleware -> Pincer)
+        sponsors = []
+        if verification_data and hasattr(verification_data, "sponsors") and verification_data.sponsors:
+            # verification_data.sponsors is likely a list of dicts or objects depending on x402 version
+            # We need to coerce them to SponsoredOffer
+            raw_sponsors = verification_data.sponsors
+            for s in raw_sponsors:
+                if isinstance(s, dict):
+                    sponsors.append(SponsoredOffer(**s))
+                elif isinstance(s, SponsoredOffer):
+                    sponsors.append(s)
+                else:
+                    # Best effort conversion
+                    try:
+                        sponsors.append(SponsoredOffer(**dict(s)))
+                    except:
+                        pass
+            
+            logger.info(f"Got {len(sponsors)} sponsors from verification data")
+            
+            # Use the session ID from the first sponsor if available
+            # This is critical because Pincer generated this session ID and mapped it to the payment
+            if sponsors:
+                 session_id = sponsors[0].session_id
+                 logger.info(f"Using session ID from sponsor: {session_id}")
+        else:
+            # Fallback: try to fetch manually (though likely won't work if session mismatch)
+            logger.warning("No sponsors in verification data, fetching with local session ID")
+            try:
+                sponsors = await pincer_client.resource.get_sponsors(session_id)
+                logger.info(f"Fetched {len(sponsors)} sponsors from Pincer manually")
+            except Exception as e:
+                logger.warning(f"Could not fetch sponsors from Pincer: {e}")
         
         # Build restaurant list - inject Shake Shack if sponsor offer exists
         restaurants = list(SAMPLE_RESTAURANTS)

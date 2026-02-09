@@ -23,8 +23,11 @@ from src.logging_utils import get_logger
 from src.models import (
     PaymentVerificationRequest,
     PaymentVerificationResponse,
+    PaymentSession,
     SponsoredOffer,
 )
+from src.logging_utils import get_correlation_id
+from datetime import datetime
 from x402 import x402Facilitator
 from x402.mechanisms.evm import FacilitatorWeb3Signer
 from x402.mechanisms.evm.exact import register_exact_evm_facilitator
@@ -170,6 +173,37 @@ class PincerFacilitator:
 
             if response.is_valid:
                 logger.info(f"Payment verified for session {request.session_id}, payer: {response.payer}")
+                
+                # Record session in DB to enable webhook processing
+                try:
+                     # Extract amount and asset from requirements if available, otherwise defaults
+                     amount_paid = config.content_price_usd
+                     payment_asset = "USDC" # or from config
+                     
+                     # MVP: Use config price directly
+                     
+                     session_record = PaymentSession(
+                        session_id=request.session_id,
+                        user_address=response.payer,
+                        network=str(requirements.network) if requirements.network else str(EVM_NETWORK),
+                        amount_paid=amount_paid,
+                        payment_asset=payment_asset,
+                        payment_hash=str(uuid.uuid4()), # We don't have the hash easily here without digging into payload
+                        verified_at=datetime.utcnow(),
+                        rebate_settled=False,
+                        correlation_id=get_correlation_id(),
+                    )
+                     await db.create_session(session_record)
+                     logger.info(f"Session recorded in DB: {request.session_id}")
+                except Exception as e:
+                    logger.error(f"Failed to record session in DB: {e}")
+                    # Should we fail verification if DB save fails? 
+                    # Yes, because otherwise webhook will fail later.
+                    return PaymentVerificationResponse(
+                        verified=False,
+                        session_id=request.session_id,
+                        error="Internal error: could not record session",
+                    )
                 
                 # Check for active sponsor campaign (MVP: hardcoded check)
                 sponsors = []

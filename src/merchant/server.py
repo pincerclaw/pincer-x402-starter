@@ -21,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.config import config
 from src.logging_utils import get_logger, setup_logging
+from src.pincer_sdk import PincerClient
 
 # Setup logging
 setup_logging(config.log_level, config.log_format)
@@ -51,21 +52,6 @@ class CheckoutResponse(BaseModel):
     message: str
 
 
-def create_webhook_signature(payload: str, secret: str) -> str:
-    """Create HMAC-SHA256 signature for webhook.
-
-    Args:
-        payload: JSON payload as string.
-        secret: Shared secret.
-
-    Returns:
-        Hex-encoded HMAC signature.
-    """
-    return hmac.new(
-        secret.encode(),
-        payload.encode(),
-        hashlib.sha256,
-    ).hexdigest()
 
 
 @app.get("/health")
@@ -95,52 +81,30 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
     # Simulate payment processing delay
     await asyncio.sleep(0.5)
 
-    # Prepare webhook payload
-    webhook_payload = {
-        "webhook_id": webhook_id,
-        "session_id": request.session_id,
-        "user_address": request.user_address,
-        "purchase_amount": request.purchase_amount,
-        "purchase_asset": "USD",
-        "timestamp": datetime.utcnow().isoformat(),
-        "merchant_id": "shake-shack",
-    }
+    # Initialize Pincer Client
+    # In a real app, this should be initialized once globally or via dependency injection
+    async with PincerClient(
+        base_url=config.pincer_url,
+        webhook_secret=config.webhook_secret
+    ) as pincer:
+        
+        # Report conversion using SDK
+        result = await pincer.merchant.report_conversion(
+            session_id=request.session_id,
+            user_address=request.user_address,
+            purchase_amount=request.purchase_amount,
+            purchase_asset="USD",
+            merchant_id="shake-shack"
+        )
+        
+        webhook_sent = result.status == "success"
+        webhook_id = result.webhook_id or "unknown"
+        message = result.message or result.error or "Unknown result"
 
-    # Convert to JSON string for signing
-    payload_str = json.dumps(webhook_payload)
-
-    # Create HMAC signature
-    signature = create_webhook_signature(payload_str, config.webhook_secret)
-
-    logger.info(f"Sending conversion webhook {webhook_id} to Pincer")
-
-    # Send webhook to Pincer
-    webhook_sent = False
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{config.pincer_url}/webhooks/conversion",
-                json=webhook_payload,
-                headers={
-                    "X-Webhook-Signature": signature,
-                    "Content-Type": "application/json",
-                },
-                timeout=30.0,
-            )
-
-            if response.status_code in [200, 201]:
-                webhook_sent = True
-                webhook_response = response.json()
-                logger.info(
-                    f"Webhook accepted by Pincer: {webhook_response.get('status')}"
-                )
-            else:
-                logger.error(
-                    f"Webhook rejected by Pincer: {response.status_code} - {response.text}"
-                )
-
-    except Exception as e:
-        logger.error(f"Error sending webhook to Pincer: {e}", exc_info=True)
+        if webhook_sent:
+             logger.info(f"Webhook accepted by Pincer: {message}")
+        else:
+             logger.error(f"Webhook rejected by Pincer: {message}")
 
     response_message = (
         f"Order confirmed! Webhook {'sent successfully' if webhook_sent else 'failed'}. "
