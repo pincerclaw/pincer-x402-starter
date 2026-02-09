@@ -63,3 +63,6 @@ treasury_keys/
 
 # Agent
 .agent/
+
+# Documentation
+site/
