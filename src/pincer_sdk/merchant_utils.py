@@ -1,0 +1,87 @@
+"""Internal merchant utilities for Pincer SDK."""
+
+import json
+import uuid
+import logging
+from datetime import datetime, timezone
+from typing import Optional, Dict, Any, TYPE_CHECKING
+
+from .types import ConversionResponse
+from .utils import create_webhook_signature
+
+if TYPE_CHECKING:
+    from .client import PincerClient
+
+logger = logging.getLogger(__name__)
+
+
+async def report_conversion_logic(
+    client: "PincerClient",
+    session_id: str,
+    user_address: str,
+    purchase_amount: float,
+    purchase_asset: str = "USD",
+    merchant_id: Optional[str] = None,
+    details: Optional[Dict[str, Any]] = None,
+) -> ConversionResponse:
+    """Report a successful conversion to Pincer."""
+    if not client.webhook_secret:
+        raise ValueError("webhook_secret is required to report conversions")
+
+    webhook_id = f"wh-{uuid.uuid4().hex[:12]}"
+    
+    # Construct payload
+    payload = {
+        "webhook_id": webhook_id,
+        "session_id": session_id,
+        "user_address": user_address,
+        "purchase_amount": purchase_amount,
+        "purchase_asset": purchase_asset,
+        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "merchant_id": merchant_id or "unknown-merchant",
+    }
+    
+    if details:
+        payload.update(details)
+
+    # Create JSON string for signing
+    payload_str = json.dumps(payload)
+    
+    # Generate signature
+    signature = create_webhook_signature(payload_str, client.webhook_secret)
+
+    logger.info(f"Reporting conversion {webhook_id} to Pincer for session {session_id}")
+
+    try:
+        response = await client._http.post(
+            "/webhooks/conversion",
+            content=payload_str,
+            headers={
+                "X-Webhook-Signature": signature,
+                "Content-Type": "application/json",
+            },
+        )
+        
+        if response.status_code in [200, 201]:
+            data = response.json()
+            return ConversionResponse(
+                status="success",
+                webhook_id=webhook_id,
+                message=data.get("status", "Conversion reported successfully"),
+            )
+        else:
+            error_msg = f"Failed to report conversion: {response.status_code} - {response.text}"
+            logger.error(error_msg)
+            return ConversionResponse(
+                status="error",
+                webhook_id=webhook_id,
+                error=error_msg,
+            )
+
+    except Exception as e:
+        logger.error(f"Error reporting conversion: {e}", exc_info=True)
+        return ConversionResponse(
+            status="error",
+            webhook_id=webhook_id,
+            error=str(e),
+        )

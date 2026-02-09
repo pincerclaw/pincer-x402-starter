@@ -1,10 +1,10 @@
 """Core Pincer Client."""
 
 import httpx
-from typing import Optional
+from typing import Optional, Dict, Any
 
-from .merchant import MerchantClient
-from .resource import ResourceClient
+from .facilitator import PincerFacilitatorClient
+from .merchant_utils import report_conversion_logic
 
 
 class PincerClient:
@@ -40,12 +40,26 @@ class PincerClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    @property
-    def merchant(self) -> MerchantClient:
-        """Access merchant-specific functionality."""
-        return MerchantClient(self)
+    def facilitator(self) -> PincerFacilitatorClient:
+        """Get a Pincer-specific facilitator for x402."""
+        return PincerFacilitatorClient(self)
 
-    @property
-    def resource(self) -> ResourceClient:
-        """Access resource-specific functionality."""
-        return ResourceClient(self)
+    async def report_conversion(
+        self,
+        session_id: str,
+        user_address: str,
+        purchase_amount: float,
+        purchase_asset: str = "USD",
+        merchant_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """Report a successful conversion to Pincer."""
+        return await report_conversion_logic(
+            self,
+            session_id=session_id,
+            user_address=user_address,
+            purchase_amount=purchase_amount,
+            purchase_asset=purchase_asset,
+            merchant_id=merchant_id,
+            details=details,
+        )

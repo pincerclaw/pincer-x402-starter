@@ -89,7 +89,7 @@ async def checkout(request: CheckoutRequest) -> CheckoutResponse:
     ) as pincer:
         
         # Report conversion using SDK
-        result = await pincer.merchant.report_conversion(
+        result = await pincer.report_conversion(
             session_id=request.session_id,
             user_address=request.user_address,
             purchase_amount=request.purchase_amount,
