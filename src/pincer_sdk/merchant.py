@@ -103,3 +103,17 @@ class MerchantClient:
                 webhook_id=webhook_id,
                 error=str(e),
             )
+
+    def create_x402_server(self) -> Any:
+        """Create a pre-configured x402ResourceServer.
+        
+        Proxy for client.resource.create_x402_server to unify the API.
+        """
+        return self.client.resource.create_x402_server()
+
+    def get_active_sponsors(self) -> Any:
+        """Get active sponsor offers for the current request context.
+        
+        Proxy for client.resource.get_active_sponsors.
+        """
+        return self.client.resource.get_active_sponsors()

@@ -31,9 +31,10 @@ from x402.http.types import RouteConfig
 from x402.mechanisms.evm.exact import ExactEvmServerScheme
 from x402.mechanisms.svm.exact import ExactSvmServerScheme
 from x402.schemas import AssetAmount, Network
-# from x402.server import x402ResourceServer <-- Removed
+from x402.server import x402ResourceServer
 
 from src.pincer_sdk import PincerClient
+from src.pincer_sdk.facilitator import PincerFacilitatorClient
 
 # Validate configuration
 validate_config_for_service("resource")
@@ -116,8 +117,11 @@ app = FastAPI(title="Resource Server", description="x402-protected resource serv
 logger.info("Initializing Pincer Client and x402 server...")
 pincer_client = PincerClient(base_url=config.pincer_url)
 
-# Create x402 server using SDK helper
-server = pincer_client.resource.create_x402_server()
+# Create x402 server using Composition Pattern
+# 1. Use Pincer's client (handles extra data like sponsors)
+facilitator = PincerFacilitatorClient(pincer_client)
+# 2. Pass it to the standard server
+server = x402ResourceServer(facilitator)
 
 # Register payment schemes
 logger.info(f"Registering EVM scheme for network: {EVM_NETWORK}")
@@ -157,8 +161,8 @@ routes = {
 logger.info(f"Configured payment routes: {list(routes.keys())}")
 
 
-# Remove middleware to demonstrate manual verification flow detailed in Integration Guide
-# app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
+# Add middleware to demonstrate simplified integration
+app.add_middleware(PaymentMiddlewareASGI, routes=routes, server=server)
 
 
 @app.get("/health")
@@ -184,60 +188,22 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
 
     with CorrelationIdContext(correlation_id):
         logger.info("Processing recommendations request")
+        
+        # Payment is already verified by middleware if we reached here!
+        
+        # Get active sponsors from the verified request context
+        # This is populated by Pincer SDK during verification
+        sponsors = pincer_client.merchant.get_active_sponsors()
+        logger.info(f"Got {len(sponsors)} sponsors from verification context")
 
         session_id = f"sess-{uuid.uuid4().hex[:12]}"
-
-        # Manual Verification Flow
-        try:
-            # 1. Get payment configuration for this route
-            route_config = routes["GET /recommendations"]
-            
-            # 2. Verify payment
-            # returns Union[Response, PaymentVerification]
-            # uses the 'server' instance created above
-            # We pass the list of PaymentOptions to force payment check if needed,
-            # or pass route_config directly now that SDK handles it.
-            response = await server.handle_request(request, route_config)
-            
-            # If it returns a Response (e.g. 402 or 400), return it immediately to the client
-            from fastapi.responses import Response
-            if isinstance(response, Response):
-                return response
-                
-            # If we get here, payment is valid (response is the success object)
-            
-            # 3. Access Sponsors directly from the result (Simpler DX)
-            # New simplified DX: sponsors are attached to the verification result by PincerResourceServer
-            sponsors = getattr(response, "sponsors", [])
-            logger.info(f"Got {len(sponsors)} sponsors from verification result")
-        
-        except Exception as e:
-            logger.exception("Payment verification error")
-            from fastapi.responses import JSONResponse
-            return JSONResponse({"error": "Payment verification failed", "details": str(e)}, status_code=500)
-            
         if sponsors:
-            # Assuming all sponsors for a request share the same session_id (which they do in Pincer)
             session_id = sponsors[0].session_id
             logger.info(f"Using session ID from sponsor: {session_id}")
-        else:
-            # Fallback: try to fetch manually (though likely won't work if session mismatch)
-            logger.warning("No sponsors in verification data, fetching with local session ID")
-            try:
-                sponsors = await pincer_client.resource.get_sponsors(session_id)
-                logger.info(f"Fetched {len(sponsors)} sponsors from Pincer manually")
-            except Exception as e:
-                logger.warning(f"Could not fetch sponsors from Pincer: {e}")
-        
-        # Build restaurant list - inject Shake Shack if sponsor offer exists
-        restaurants = list(SAMPLE_RESTAURANTS)
-        if sponsors:
-            # Insert sponsored restaurant at position 3 (after top 2)
-            restaurants.insert(2, SHAKE_SHACK)
-            logger.info("Injected Shake Shack as sponsored restaurant")
-        
+
+        # Return recommendations and any active sponsor offers
         response = RecommendationsResponse(
-            restaurants=restaurants,
+            restaurants=SAMPLE_RESTAURANTS,
             session_id=session_id,
             sponsors=sponsors
         )
