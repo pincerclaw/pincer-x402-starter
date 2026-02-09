@@ -29,9 +29,10 @@ async def verify(self, payload, requirements) -> PincerVerificationResponse
 
 ### `get_active_sponsors`
 
-Access the sponsors captured during the verification of the current request.
+Access the sponsors captured during the verification of the current request via the middleware context.
 
 ```python
-# Helper on the main client
-sponsors = client.merchant.get_active_sponsors()
+# Access via FastAPI request object (populated by x402 middleware)
+payment = getattr(request.state, "payment", None)
+sponsors = getattr(payment, "sponsors", []) if payment else []
 ```

@@ -58,8 +58,9 @@ async def get_premium_data(request: Request):
     # If we reach here, payment is already verified!
 
     # 4. Access Active Sponsors (Rebates)
-    # Pincer automatically populates this context variable
-    sponsors = client.merchant.get_active_sponsors()
+    # The x402 middleware populates request.state.payment with verification data
+    payment = getattr(request.state, "payment", None)
+    sponsors = getattr(payment, "sponsors", []) if payment else []
 
     return {
         "status": "paid",

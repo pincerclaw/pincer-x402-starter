@@ -191,10 +191,12 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
         
         # Payment is already verified by middleware if we reached here!
         
-        # Get active sponsors from the verified request context
-        # This is populated by Pincer SDK during verification
-        sponsors = pincer_client.merchant.get_active_sponsors()
-        logger.info(f"Got {len(sponsors)} sponsors from verification context")
+        # Payment is already verified by middleware if we reached here!
+        # The x402 middleware populates request.state.payment with the verification result
+        payment = getattr(request.state, "payment", None)
+        sponsors = getattr(payment, "sponsors", []) if payment else []
+        
+        logger.info(f"Got {len(sponsors)} sponsors from middleware context")
 
         session_id = f"sess-{uuid.uuid4().hex[:12]}"
         if sponsors:

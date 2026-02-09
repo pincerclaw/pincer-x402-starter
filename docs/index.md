@@ -6,7 +6,6 @@
 
 Pincer represents a new paradigm in API monetization: **Payment-Gated Intelligence**. It seamlessly integrates high-performance AI agents with the x402 payment protocol, allowing developers to monetize their APIs with micro-transactions while offering automated rebates and sponsored access.
 
-**Resources:**
 [Product Demo](https://pincer-web.pages.dev/){ .md-button .md-button--primary }
 [Pitch Deck](https://pincer-pitch.pages.dev){ .md-button }
 
