@@ -7,8 +7,8 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a separate file system
 ENV UV_LINK_MODE=copy
 
-# Install dependencies (only pyproject.toml and uv.lock are needed for this step)
-COPY pyproject.toml uv.lock ./
+# Install dependencies (only pyproject.toml, uv.lock and README.md are needed for this step)
+COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy the entire src directory to satisfy internal imports (src.config, src.database, etc.)
