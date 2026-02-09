@@ -38,6 +38,9 @@ jobs:
     needs: test
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    environment:
+      name: release
+      url: https://pypi.org/p/pincer-sdk
     permissions:
       id-token: write # Required for trusted publishing
     steps:
