@@ -51,20 +51,42 @@ nano .env
 
 ### 4. Run the Demo
 
-**Terminal 1: Start the Pincer Service (Unified)**
-_Runs the Resource, Merchant, and Pincer services in a single process._
+For a full end-to-end flow, you need to run three separate services.
+
+#### Option A: One-click local setup (Recommended for development)
+
+We provide a helper script to start all services (Facilitator, Resource, Merchant) in separate processes:
 
 ```bash
-make start
-# Or manually: uv run python src/pincer/server.py --workers 4
+uv run scripts/run_all.py
 ```
 
+#### Option B: Manual independent startup
+
+Start each service in a separate terminal window:
+
+1. **Pincer Facilitator**: Core protocol engine.
+
+   ```bash
+   uv run python src/pincer/server.py
+   ```
+
+2. **Resource Server**: Paywalled content provider.
+
+   ```bash
+   uv run python src/resource/server.py
+   ```
+
+3. **Merchant Server**: Sponsor backend.
+   ```bash
+   uv run python src/merchant/server.py
+   ```
+
 **Terminal 2: Run the Demo Agent**
-_Simulates a user requesting content._
+_Simulates a user requesting content from the Resource Server._
 
 ```bash
-make demo
-# Or manually: uv run python src/agent/demo.py
+uv run python src/agent/demo.py
 ```
 
 ---
