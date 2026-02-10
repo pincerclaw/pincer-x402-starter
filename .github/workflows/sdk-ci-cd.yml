@@ -29,6 +29,9 @@ jobs:
         run: uv python install
 
       - name: Run Tests
+        env:
+          SVM_ADDRESS: "11111111111111111111111111111111"
+          TREASURY_SVM_ADDRESS: "11111111111111111111111111111111"
         run: |
           uv sync --all-extras --dev
           uv run pytest
