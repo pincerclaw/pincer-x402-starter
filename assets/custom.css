@@ -1,0 +1,29 @@
+/* docs/assets/custom.css */
+
+.md-typeset .md-button {
+  border-radius: 0.4rem;
+  padding: 0.5em 1em;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border-width: 1px;
+}
+
+.md-typeset .md-button:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 0.1),
+    0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.md-typeset .md-button--primary {
+  background-color: var(--md-primary-fg-color);
+  color: var(--md-primary-bg-color);
+  border-color: var(--md-primary-fg-color);
+}
+
+.md-typeset .md-button--primary:hover {
+  background-color: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+}
