@@ -50,9 +50,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Build Package
-        run: |
-          cd packages/pincer-sdk
-          uv build
+        run: uv build --package pincer-sdk --out-dir packages/pincer-sdk/dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
