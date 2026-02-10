@@ -3,7 +3,6 @@
 Loads all configuration from environment variables with sensible defaults.
 """
 
-import os
 from typing import Literal
 
 from dotenv import load_dotenv

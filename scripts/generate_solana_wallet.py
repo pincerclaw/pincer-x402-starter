@@ -4,8 +4,8 @@
 這個腳本會生成一個新的 Solana 錢包並顯示所有需要的資訊
 """
 
+import base58  # type: ignore
 from solders.keypair import Keypair
-import base58
 
 print("🔑 正在生成 Solana 測試錢包...")
 print("=" * 60)

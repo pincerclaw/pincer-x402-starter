@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
+import os
 import subprocess
 import time
-import sys
-import os
+
 
 def run_service(name, cmd, env=None):
     print(f"🚀 Starting {name}...")

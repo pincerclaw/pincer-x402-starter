@@ -3,22 +3,15 @@
 Simulates a merchant checkout flow and sends conversion webhooks to Pincer.
 """
 
-import hashlib
-import hmac
-import sys
-import uuid
-import json
 import asyncio
-from datetime import datetime
-from pathlib import Path
+import uuid
 
-import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
+from pincer_sdk import PincerClient
 from pydantic import BaseModel
 
 from src.config import config
 from src.logging_utils import get_logger, setup_logging
-from pincer_sdk import PincerClient
 
 # Setup logging
 setup_logging(config.log_level, config.log_format)

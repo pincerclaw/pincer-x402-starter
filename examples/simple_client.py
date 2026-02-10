@@ -5,7 +5,9 @@ This script demonstrates how to import and initialize the Pincer SDK client.
 It assumes you have a local Pincer server running (e.g. via `docker compose up`).
 """
 import asyncio
+
 from pincer_sdk import PincerClient
+
 
 async def main():
     print("🚀 Initializing Pincer SDK Client...")

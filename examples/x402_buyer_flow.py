@@ -14,7 +14,6 @@ from pathlib import Path
 
 import httpx
 from dotenv import load_dotenv
-
 from x402 import x402Client
 from x402.http.clients import x402HttpxClient
 from x402.mechanisms.svm import KeypairSigner
@@ -31,7 +30,7 @@ SVM_PRIVATE_KEY = os.getenv("SVM_PRIVATE_KEY")
 
 
 async def main():
-    print(f"🚀 Pincer x402 Buyer Flow")
+    print("🚀 Pincer x402 Buyer Flow")
     print(f"Target: {RESOURCE_URL}/recommendations")
 
     if not SVM_PRIVATE_KEY:

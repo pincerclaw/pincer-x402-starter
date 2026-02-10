@@ -5,7 +5,7 @@ Supports both EVM (USDC on Base Sepolia) and SVM (SOL on Solana Devnet).
 
 import sys
 from pathlib import Path
-from typing import Dict
+from typing import Any, Dict
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -21,7 +21,7 @@ class PayoutEngine:
 
     async def send_rebate(
         self, user_address: str, amount: float, asset: str, network: str
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Send a rebate payment to a user.
 
         Args:
@@ -51,9 +51,7 @@ class PayoutEngine:
             logger.error(f"Payout error: {e}", exc_info=True)
             return {"status": "error", "error": str(e)}
 
-    async def _send_evm_rebate(
-        self, user_address: str, amount: float, asset: str, network: str
-    ) -> Dict[str, any]:
+    async def _send_evm_rebate(self, user_address: str, amount: float, asset: str, network: str) -> Any:
         """Send EVM rebate (USDC on Base Sepolia).
 
         Args:
@@ -108,7 +106,7 @@ class PayoutEngine:
 
     async def _send_svm_rebate(
         self, user_address: str, amount: float, asset: str, network: str
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Send SVM rebate (SOL/SPL on Solana Devnet).
 
         Args:

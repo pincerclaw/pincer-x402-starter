@@ -10,17 +10,13 @@ from typing import Any, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, HTMLResponse
+from starlette.responses import HTMLResponse, JSONResponse
 from starlette.types import ASGIApp
-
 from x402.http.middleware.fastapi import FastAPIAdapter
-from x402.http.types import HTTPRequestContext, HTTPProcessResult, RouteConfig
+from x402.http.types import HTTPProcessResult, HTTPRequestContext, RouteConfig
 from x402.http.x402_http_server import x402HTTPResourceServer
 from x402.schemas.responses import VerifyResponse
 from x402.server import x402ResourceServer
-
-from .client import PincerClient
-from .facilitator import PincerFacilitatorClient
 
 # ------------------------------------------------------------------------------
 # Monkey-patch: Enable Extra Fields
@@ -48,7 +44,7 @@ class PincerHTTPResourceServer(x402HTTPResourceServer):
         # But for maintenance, we rely on _process_request_core being available.
         gen = self._process_request_core(context, paywall_config)
         result = None
-        exception = None
+        exception: Optional[Exception] = None
         captured_sponsors = []
         
         try:
@@ -75,7 +71,7 @@ class PincerHTTPResourceServer(x402HTTPResourceServer):
                 elif phase == "verify_payment":
                     payload, reqs = target
                     # This returns VerifyResponse (now with sponsors in __dict__ due to monkey-patch)
-                    result = await self._server.verify_payment(payload, reqs)
+                    result = await self._server.verify_payment(payload, reqs)  # type: ignore
                     
                     # Capture sponsors
                     if hasattr(result, "sponsors"):
@@ -172,9 +168,8 @@ class PincerPaymentMiddleware(BaseHTTPMiddleware):
             sponsors = getattr(result, "sponsors", [])
             
             # Create a simple object to hold payment state including sponsors
-            class PaymentContext:
-                pass
-            ctx = PaymentContext()
+            from types import SimpleNamespace
+            ctx = SimpleNamespace()
             ctx.sponsors = sponsors
             request.state.payment = ctx
 
@@ -186,20 +181,21 @@ class PincerPaymentMiddleware(BaseHTTPMiddleware):
                 return response
 
             # Just call settle
-            try:
-                settle_result = await self.http_server.process_settlement(
-                    result.payment_payload,
-                    result.payment_requirements,
-                )
+            if result.payment_payload and result.payment_requirements:
+                try:
+                    settle_result = await self.http_server.process_settlement(
+                        result.payment_payload,
+                        result.payment_requirements,
+                    )
                 
-                # Add settlement headers
-                if settle_result.success:
-                     for k, v in settle_result.headers.items():
-                         response.headers[k] = v
-                         
-            except Exception as e:
-                # Log usage but don't fail request
-                print(f"Settlement error: {e}")
+                    # Add settlement headers
+                    if settle_result.success:
+                         for k, v in settle_result.headers.items():
+                             response.headers[k] = v
+                             
+                except Exception as e:
+                    # Log usage but don't fail request
+                    print(f"Settlement error: {e}")
 
             return response
 

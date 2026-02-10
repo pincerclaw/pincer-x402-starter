@@ -10,10 +10,9 @@ Usage:
 import asyncio
 import os
 import sys
-import uuid
 from pathlib import Path
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 from pincer_sdk import PincerClient
 
 # Add project root to path
@@ -50,7 +49,7 @@ async def report_conversion(session_id: str):
             )
             
             if result.status == "success":
-                print(f"✅ Conversion Success! Rebate Triggered.")
+                print("✅ Conversion Success! Rebate Triggered.")
                 print(f"   Webhook ID: {result.webhook_id}")
             else:
                 print(f"⚠️ Reporting Failed: {result.error}")

@@ -9,7 +9,6 @@ Based on: https://github.com/coinbase/x402/blob/main/examples/python/facilitator
 import sys
 import uuid
 from pathlib import Path
-from typing import Optional
 
 from eth_account import Account
 from solders.keypair import Keypair
@@ -17,23 +16,24 @@ from solders.keypair import Keypair
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.config import config
-from src.database import db
-from src.logging_utils import get_logger
-from src.models import (
-    PaymentVerificationRequest,
-    PaymentVerificationResponse,
-    PaymentSession,
-    SponsoredOffer,
-)
-from src.logging_utils import get_correlation_id
 from datetime import datetime
+
 from x402 import x402Facilitator
 from x402.mechanisms.evm import FacilitatorWeb3Signer
 from x402.mechanisms.evm.exact import register_exact_evm_facilitator
 from x402.mechanisms.svm import FacilitatorKeypairSigner
 from x402.mechanisms.svm.exact import register_exact_svm_facilitator
 from x402.schemas import Network, PaymentRequirements, parse_payment_payload
+
+from src.config import config
+from src.database import db
+from src.logging_utils import get_correlation_id, get_logger
+from src.models import (
+    PaymentSession,
+    PaymentVerificationRequest,
+    PaymentVerificationResponse,
+    SponsoredOffer,
+)
 
 logger = get_logger(__name__)
 

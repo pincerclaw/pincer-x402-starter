@@ -9,19 +9,18 @@ Usage:
 
 import os
 import sys
-import uvicorn
 from pathlib import Path
-from fastapi import FastAPI, Request
+
+import uvicorn
 from dotenv import load_dotenv
-
-from x402.server import x402ResourceServer
-from x402.mechanisms.svm.exact import ExactSvmServerScheme
-from x402.http import PaymentOption
-from x402.http.types import RouteConfig
-
+from fastapi import FastAPI, Request
 from pincer_sdk import PincerClient
 from pincer_sdk.facilitator import PincerFacilitatorClient
 from pincer_sdk.middleware import PincerPaymentMiddleware
+from x402.http import PaymentOption
+from x402.http.types import RouteConfig
+from x402.mechanisms.svm.exact import ExactSvmServerScheme
+from x402.server import x402ResourceServer
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))

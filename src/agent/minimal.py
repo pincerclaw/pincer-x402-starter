@@ -6,11 +6,13 @@ from pathlib import Path
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.config import config
 from x402 import x402Client
 from x402.http.clients import x402HttpxClient
 from x402.mechanisms.svm import KeypairSigner
 from x402.mechanisms.svm.exact.register import register_exact_svm_client
+
+from src.config import config
+
 
 async def main():
     print("🚀 Starting Minimal x402 Agent...")

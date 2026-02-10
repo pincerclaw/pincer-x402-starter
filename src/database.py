@@ -7,10 +7,8 @@ support for idempotency and anti-replay protection.
 import asyncio
 import json
 import sqlite3
-import uuid
-from contextlib import asynccontextmanager
 from datetime import datetime
-from typing import AsyncIterator, Optional, List
+from typing import List, Optional
 
 import aiosqlite
 
@@ -109,7 +107,7 @@ CREATE INDEX IF NOT EXISTS idx_settlements_webhook_id ON settlements(webhook_id)
 class Database:
     """Async database interface for Pincer ledger."""
 
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: Optional[str] = None):
         """Initialize database connection.
 
         Args:
@@ -385,7 +383,7 @@ class Database:
                     )
         return None
 
-    async def update_webhook_status(self, webhook_id: str, status: str, error: str = None, tx_hash: str = None) -> None:
+    async def update_webhook_status(self, webhook_id: str, status: str, error: Optional[str] = None, tx_hash: Optional[str] = None) -> None:
         """Update webhook status."""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -433,7 +431,7 @@ class Database:
             )
             await db.commit()
 
-    async def update_settlement_status(self, settlement_id: str, status: str, tx_hash: str = None) -> None:
+    async def update_settlement_status(self, settlement_id: str, status: str, tx_hash: Optional[str] = None) -> None:
         """Update settlement status."""
         async with aiosqlite.connect(self.db_path) as db:
             updates = ["status = ?", "confirmed_at = ?"]

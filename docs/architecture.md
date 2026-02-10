@@ -44,7 +44,7 @@ The gatekeeper. It intercepts requests, checks for valid payment headers, and is
 
 ### 2. Facilitator (Verified by Pincer)
 
-An on-chain or off-chain entity that verifies the payment occurred. Pincer acts as a facilitator, indexing blockchain events to confirm transactions instantly. The facilitator logic has been professionally audited by **Eric, Gemini AI** ([Link to Report](../audit_reports/pincer_audit_2026_02.md)).
+An on-chain or off-chain entity that verifies the payment occurred. Pincer acts as a facilitator, indexing blockchain events to confirm transactions instantly. The facilitator logic has been professionally audited ([Link to Report](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports)).
 
 ### 3. Sponsors
 

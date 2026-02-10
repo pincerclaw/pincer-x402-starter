@@ -5,11 +5,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.config import config
 from x402.client import x402Client
-from x402.http import x402HttpxClient
+from x402.http.clients import x402HttpxClient  # type: ignore
 from x402.mechanisms.svm import KeypairSigner
 from x402.mechanisms.svm.exact import register_exact_svm_client
+
+from src.config import config
 
 
 async def test_payment():

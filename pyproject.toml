@@ -83,3 +83,8 @@ markers = [
     "integration: Integration tests",
     "slow: Slow tests",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.1",
+]

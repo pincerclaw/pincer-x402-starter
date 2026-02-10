@@ -60,7 +60,7 @@ Understand how Pincer facilitates trustless payments and rebates between Agents 
 
 The Pincer protocol and reference implementation have been audited for security and functional correctness.
 
-[View Audit Report](audit_reports/pincer_audit_2026_02.md){ .md-button }
+[View Audit Reports](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports){ .md-button }
 
 ## See it in Action
 

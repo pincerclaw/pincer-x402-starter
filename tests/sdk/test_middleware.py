@@ -1,14 +1,13 @@
 """Integration tests for PincerPaymentMiddleware."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
-from starlette.middleware.base import BaseHTTPMiddleware
-
 from pincer_sdk.middleware import PincerPaymentMiddleware
-from x402.http.types import HTTPRequestContext, HTTPProcessResult, RouteConfig
-from x402.schemas.responses import VerifyResponse, PaymentPayload, PaymentRequirements
+from x402.http.types import HTTPProcessResult, RouteConfig
+from x402.schemas.responses import PaymentPayload, PaymentRequirements, VerifyResponse
 
 # Mock data
 MOCK_SPONSOR = {

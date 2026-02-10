@@ -1,8 +1,8 @@
 """Unit tests for anti-replay protection (session reuse prevention)."""
 
-import pytest
-import uuid
 from datetime import datetime
+
+import pytest
 
 from src.database import Database
 from src.models import PaymentSession

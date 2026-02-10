@@ -4,15 +4,23 @@ A generic x402-protected resource server that can be adapted for any
 paywalled content. Based on Coinbase x402 FastAPI example.
 """
 
-import sys
 import uuid
-from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Request
+from pincer_sdk import PincerClient
+from pincer_sdk.facilitator import PincerFacilitatorClient
+from pincer_sdk.middleware import PincerPaymentMiddleware
+from pincer_sdk.types import SponsoredOffer
 from pydantic import BaseModel
 
-from pincer_sdk.types import SponsoredOffer
+# from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption  <-- Removed
+from x402.http import PaymentOption
+from x402.http.types import RouteConfig
+from x402.mechanisms.evm.exact import ExactEvmServerScheme
+from x402.mechanisms.svm.exact import ExactSvmServerScheme
+from x402.schemas import AssetAmount, Network
+from x402.server import x402ResourceServer
 
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
@@ -20,19 +28,6 @@ from src.logging_utils import (
     get_logger,
     setup_logging,
 )
-import httpx
-# from x402.http import FacilitatorConfig, HTTPFacilitatorClient, PaymentOption  <-- Removed
-from x402.http import PaymentOption
-from x402.http.middleware.fastapi import PaymentMiddlewareASGI
-from x402.http.types import RouteConfig
-from x402.mechanisms.evm.exact import ExactEvmServerScheme
-from x402.mechanisms.svm.exact import ExactSvmServerScheme
-from x402.schemas import AssetAmount, Network
-from x402.server import x402ResourceServer
-
-from pincer_sdk import PincerClient
-from pincer_sdk.facilitator import PincerFacilitatorClient
-from pincer_sdk.middleware import PincerPaymentMiddleware
 
 # Validate configuration
 validate_config_for_service("resource")
@@ -119,11 +114,11 @@ pincer_client = PincerClient(base_url=config.pincer_url)
 # We can provide the supported schemes directly if we known them.
 supported_schemes_fallback = {
     "kinds": [
-        {"x402Version": 2, "scheme": "exact", "network": SVM_NETWORK, "extra": {}},
+        {"x402Version": 2, "scheme": "exact", "network": SVM_NETWORK, "extra": {"feePayer": config.svm_address or config.treasury_svm_address}},
         {"x402Version": 2, "scheme": "exact", "network": EVM_NETWORK, "extra": {}},
     ],
     "extensions": [],
-    "signers": []
+    "signers": {}
 }
 
 # Create x402 server using Composition Pattern
@@ -158,6 +153,7 @@ routes = {
                 pay_to=config.svm_address or config.treasury_svm_address,
                 price=f"${config.content_price_usd}",
                 network=SVM_NETWORK,
+                extra={"feePayer": config.svm_address or config.treasury_svm_address},
             ),
         ],
         mime_type="application/json",
@@ -180,6 +176,7 @@ routes = {
                 pay_to=config.svm_address or config.treasury_svm_address,
                 price=f"${config.content_price_usd}",
                 network=SVM_NETWORK,
+                extra={"feePayer": config.svm_address or config.treasury_svm_address},
             ),
         ],
         mime_type="application/json",
@@ -228,7 +225,13 @@ async def get_recommendations(request: Request) -> RecommendationsResponse:
 
         session_id = f"sess-{uuid.uuid4().hex[:12]}"
         if sponsors:
-            session_id = sponsors[0].session_id
+            sponsor = sponsors[0]
+            # Handle both object and dict (Pydantic v2 might return dicts in some contexts)
+            if hasattr(sponsor, "session_id"):
+                session_id = sponsor.session_id
+            elif isinstance(sponsor, dict):
+                session_id = str(sponsor.get("session_id", ""))
+            
             logger.info(f"Using session ID from sponsor: {session_id}")
 
         # Return recommendations and any active sponsor offers

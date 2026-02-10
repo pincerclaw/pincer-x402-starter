@@ -1,7 +1,8 @@
 """Core Pincer Client."""
 
+from typing import Any, Dict, Optional
+
 import httpx
-from typing import Optional, Dict, Any
 
 from .facilitator import PincerFacilitatorClient
 from .merchant_utils import report_conversion_logic

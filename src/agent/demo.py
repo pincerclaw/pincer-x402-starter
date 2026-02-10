@@ -9,11 +9,16 @@ Based on Coinbase x402 httpx client example.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 
 import httpx
 from eth_account import Account
+from x402 import x402Client
+from x402.http import x402HTTPClient
+from x402.http.clients import x402HttpxClient
+from x402.mechanisms.evm import EthAccountSigner
+from x402.mechanisms.evm.exact.register import register_exact_evm_client
+from x402.mechanisms.svm import KeypairSigner
+from x402.mechanisms.svm.exact.register import register_exact_svm_client
 
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
@@ -22,13 +27,6 @@ from src.logging_utils import (
     get_logger,
     setup_logging,
 )
-from x402 import x402Client
-from x402.http import x402HTTPClient
-from x402.http.clients import x402HttpxClient
-from x402.mechanisms.evm import EthAccountSigner
-from x402.mechanisms.evm.exact.register import register_exact_evm_client
-from x402.mechanisms.svm import KeypairSigner
-from x402.mechanisms.svm.exact.register import register_exact_svm_client
 
 # Validate configuration
 validate_config_for_service("agent")
@@ -104,14 +102,14 @@ async def main():
         http_client = x402HTTPClient(client)
 
         # Register payment schemes (優先使用 Solana)
-        user_address = None
+        _ = None
         network_name = None
         is_solana = False
 
         if config.svm_private_key:
             svm_signer = KeypairSigner.from_base58(config.svm_private_key)
             register_exact_svm_client(client, svm_signer)
-            user_address = svm_signer.address
+            _ = svm_signer.address
             network_name = "Solana Devnet"
             is_solana = True
             print(f"\n🔐 Wallet: {svm_signer.address}")
@@ -120,7 +118,7 @@ async def main():
         elif config.evm_private_key:
             account = Account.from_key(config.evm_private_key)
             register_exact_evm_client(client, EthAccountSigner(account))
-            user_address = account.address
+            _ = account.address
             network_name = "Base Sepolia"
             is_solana = False
             print(f"\n🔐 Wallet: {account.address}")
@@ -161,7 +159,7 @@ async def main():
 
                 print(f"📋 {len(restaurants)} restaurant recommendations:\n")
                 for i, restaurant in enumerate(restaurants[:5], 1):
-                    stars = "⭐" * int(restaurant.get('rating', 0))
+                    _ = "⭐" * int(restaurant.get('rating', 0))
                     price = "$" * restaurant['price_level']
                     print(f"   {i}. {restaurant['name']}")
                     print(f"      {restaurant['cuisine']} | {price} | {restaurant.get('rating', 'N/A')}★")

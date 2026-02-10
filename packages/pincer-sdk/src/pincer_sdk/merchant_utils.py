@@ -1,10 +1,10 @@
 """Internal merchant utilities for Pincer SDK."""
 
 import json
-import uuid
 import logging
+import uuid
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from .types import ConversionResponse
 from .utils import create_webhook_signature

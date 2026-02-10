@@ -1,11 +1,10 @@
 """Unit tests for sponsor budget management."""
 
-import pytest
-import sqlite3
 from datetime import datetime
 
+import pytest
+
 from src.database import Database
-from src.models import SponsorCampaign
 
 
 @pytest.mark.unit

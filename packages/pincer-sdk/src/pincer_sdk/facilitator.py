@@ -2,7 +2,8 @@
 
 import logging
 from contextvars import ContextVar
-from typing import Optional, List, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional
+
 from pydantic import BaseModel
 
 from .types import SponsoredOffer

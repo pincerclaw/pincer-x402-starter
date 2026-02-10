@@ -8,33 +8,30 @@ Main FastAPI application integrating:
 """
 
 import sys
-from pathlib import Path
 import uuid
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 
 from src.config import config, validate_config_for_service
 from src.database import db
 from src.logging_utils import (
     CorrelationIdContext,
     get_logger,
-    set_correlation_id,
     setup_logging,
 )
 from src.models import (
     ConversionWebhook,
     PaymentVerificationRequest,
-    Coupon,
     SponsoredOffer,
 )
-
 from src.pincer.payout import payout_engine
 from src.pincer.verification import pincer_facilitator, verifier
-from pincer_sdk.facilitator import PincerFacilitatorClient
 from src.pincer.webhooks import WebhookHandler
 
 

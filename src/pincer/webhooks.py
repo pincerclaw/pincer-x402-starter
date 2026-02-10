@@ -7,9 +7,8 @@ import hashlib
 import hmac
 import sys
 import uuid
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict
 
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -21,7 +20,6 @@ from src.models import (
     ConversionWebhook,
     RebateSettlement,
     WebhookRecord,
-    PaymentVerificationResponse,
 )
 
 logger = get_logger(__name__)
@@ -64,7 +62,7 @@ class WebhookHandler:
         webhook: ConversionWebhook,
         signature: str,
         raw_payload: bytes,
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """Process a merchant conversion webhook.
 
         Implements:
