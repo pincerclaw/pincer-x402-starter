@@ -12,13 +12,15 @@ This project demonstrates a complete, production-ready flow where content access
 
 **Resources:**
 
-- [Product Demo](https://pincer-web.pages.dev/)
-- [Pitch Deck](https://pincer-pitch.pages.dev)
-- [Security Audit Reports](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports)
-- [Pincer SDK](https://pypi.org/project/pincer-sdk/)
-- [Pincer Integration (for Human)](https://pincerclaw.github.io/pincer-x402-starter/)
-- [Pincer Integration (for Agents)](https://pincer.zeabur.app/skill.md)
-- [Pincer API docs](https://pincer.zeabur.app/docs)
+| Resource                                                                                      | Description                                |
+| :-------------------------------------------------------------------------------------------- | :----------------------------------------- |
+| [🚀 Product Demo](https://pincer-web.pages.dev/)                                              | Experience the Pincer protocol in action.  |
+| [📊 Pitch Deck](https://pincer-pitch.pages.dev)                                               | Overview of the vision and business model. |
+| [📂 Audit Reports](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports) | Comprehensive security evaluation.         |
+| [📦 Pincer SDK](https://pypi.org/project/pincer-sdk/)                                         | Official Python SDK on PyPI.               |
+| [📖 Human Docs](https://pincerclaw.github.io/pincer-x402-starter/)                            | Integration guide for developers.          |
+| [🤖 Agent Skill](https://pincer.zeabur.app/skill.md)                                          | Protocol instructions for AI agents.       |
+| [📡 API Reference](https://pincer.zeabur.app/docs)                                            | Technical API                              |
 
 ---
 
