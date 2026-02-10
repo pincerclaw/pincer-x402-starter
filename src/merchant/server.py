@@ -16,12 +16,9 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from src.config import config
 from src.logging_utils import get_logger, setup_logging
-from src.pincer_sdk import PincerClient
+from pincer_sdk import PincerClient
 
 # Setup logging
 setup_logging(config.log_level, config.log_format)

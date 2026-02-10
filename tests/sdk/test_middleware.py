@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.pincer_sdk.middleware import PincerPaymentMiddleware
+from pincer_sdk.middleware import PincerPaymentMiddleware
 from x402.http.types import HTTPRequestContext, HTTPProcessResult, RouteConfig
 from x402.schemas.responses import VerifyResponse, PaymentPayload, PaymentRequirements
 
@@ -70,7 +70,7 @@ def test_middleware_captures_sponsors(mock_server):
     # To test the integration properly without a real network, we should mock 
     # PincerHTTPResourceServer.process_http_request to return a specific result
     
-    with patch("src.pincer_sdk.middleware.PincerHTTPResourceServer.process_http_request") as mock_process:
+    with patch("pincer_sdk.middleware.PincerHTTPResourceServer.process_http_request") as mock_process:
         # Construct valid objects
         reqs = PaymentRequirements(
             scheme="exact",
@@ -94,7 +94,7 @@ def test_middleware_captures_sponsors(mock_server):
         mock_process.return_value = result
         
         # Also allow requires_payment to return True
-        with patch("src.pincer_sdk.middleware.PincerHTTPResourceServer.requires_payment", return_value=True):
+        with patch("pincer_sdk.middleware.PincerHTTPResourceServer.requires_payment", return_value=True):
              response = client.get("/protected")
              
              assert response.status_code == 200

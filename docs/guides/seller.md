@@ -39,7 +39,7 @@ server = x402ResourceServer(facilitator)
 The simplest way to protect your API is using the **Pincer SDK Middleware**.
 
 ```python
-from src.pincer_sdk.middleware import PincerPaymentMiddleware
+from pincer_sdk.middleware import PincerPaymentMiddleware
 
 # 1. Define Routes & Costs
 routes = {

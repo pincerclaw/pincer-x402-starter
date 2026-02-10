@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-from src.pincer_sdk.client import PincerClient
+from pincer_sdk.client import PincerClient
 
 @pytest.fixture
 def mock_httpx_client():

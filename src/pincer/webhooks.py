@@ -17,7 +17,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from src.config import config
 from src.database import db
 from src.logging_utils import get_correlation_id, get_logger
-from src.models import ConversionWebhook, RebateSettlement, WebhookRecord
+from src.models import (
+    ConversionWebhook,
+    RebateSettlement,
+    WebhookRecord,
+    PaymentVerificationResponse,
+)
 
 logger = get_logger(__name__)
 

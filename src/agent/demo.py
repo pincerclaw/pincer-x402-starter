@@ -15,9 +15,6 @@ from pathlib import Path
 import httpx
 from eth_account import Account
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
     CorrelationIdContext,

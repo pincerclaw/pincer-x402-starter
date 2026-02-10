@@ -12,10 +12,7 @@ from typing import Optional
 from fastapi import FastAPI, Request
 from pydantic import BaseModel
 
-# Add parent to path so we can import from src
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from src.pincer_sdk.types import SponsoredOffer
+from pincer_sdk.types import SponsoredOffer
 
 from src.config import config, validate_config_for_service
 from src.logging_utils import (
@@ -33,9 +30,9 @@ from x402.mechanisms.svm.exact import ExactSvmServerScheme
 from x402.schemas import AssetAmount, Network
 from x402.server import x402ResourceServer
 
-from src.pincer_sdk import PincerClient
-from src.pincer_sdk.facilitator import PincerFacilitatorClient
-from src.pincer_sdk.middleware import PincerPaymentMiddleware
+from pincer_sdk import PincerClient
+from pincer_sdk.facilitator import PincerFacilitatorClient
+from pincer_sdk.middleware import PincerPaymentMiddleware
 
 # Validate configuration
 validate_config_for_service("resource")

@@ -34,6 +34,7 @@ from src.models import (
 
 from src.pincer.payout import payout_engine
 from src.pincer.verification import pincer_facilitator, verifier
+from pincer_sdk.facilitator import PincerFacilitatorClient
 from src.pincer.webhooks import WebhookHandler
 
 

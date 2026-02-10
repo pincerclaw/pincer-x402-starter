@@ -7,7 +7,7 @@ The recommended way to protect your API. It handles the x402 challenge-response 
 ### Usage (FastAPI)
 
 ```python
-from src.pincer_sdk.middleware import PincerPaymentMiddleware
+from pincer_sdk.middleware import PincerPaymentMiddleware
 from x402.server import x402ResourceServer
 
 # ... initialize client and facilitator

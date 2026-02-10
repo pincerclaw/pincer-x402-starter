@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - "src/pincer_sdk/**"
+      - "packages/pincer-sdk/**"
       - "tests/sdk/**"
       - ".github/workflows/sdk-ci-cd.yml"
   pull_request:
     branches: [main]
     paths:
-      - "src/pincer_sdk/**"
+      - "packages/pincer-sdk/**"
       - "tests/sdk/**"
   release:
     types: [published]
@@ -30,8 +30,8 @@ jobs:
 
       - name: Run Tests
         run: |
-          uv sync --extra dev
-          PYTHONPATH=. uv run pytest tests/sdk
+          uv sync --all-extras --dev
+          uv run pytest
 
   publish:
     name: Publish to PyPI
@@ -51,10 +51,10 @@ jobs:
 
       - name: Build Package
         run: |
-          cd src/pincer_sdk
+          cd packages/pincer-sdk
           uv build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: src/pincer_sdk/dist/
+          packages-dir: packages/pincer-sdk/dist/

@@ -1,6 +1,8 @@
 """Unit tests for anti-replay protection (session reuse prevention)."""
 
 import pytest
+import uuid
+from datetime import datetime
 
 from src.database import Database
 from src.models import PaymentSession
@@ -16,7 +18,6 @@ class TestAntiReplay:
         db_path = tmp_path / "test.db"
         db = Database(str(db_path))
         await db.initialize()
-        await db.initialize_default_campaign()
         return db
 
     @pytest.mark.asyncio
@@ -26,7 +27,9 @@ class TestAntiReplay:
             session_id="sess-test-123",
             user_address="0x123",
             network="eip155:84532",
-            amount_paid_usd=0.10,
+            amount_paid=0.10,
+            payment_asset="USDC",
+            verified_at=datetime.utcnow(),
             rebate_settled=False,
         )
 
@@ -38,7 +41,7 @@ class TestAntiReplay:
         assert retrieved.rebate_settled is False
 
         # Mark as settled
-        await test_db.mark_session_rebate_settled("sess-test-123")
+        await test_db.mark_session_settled("sess-test-123")
 
         # Verify updated state
         retrieved = await test_db.get_session("sess-test-123")
@@ -51,14 +54,16 @@ class TestAntiReplay:
             session_id="sess-test-456",
             user_address="0x456",
             network="eip155:84532",
-            amount_paid_usd=0.10,
+            amount_paid=0.10,
+            payment_asset="USDC",
+            verified_at=datetime.utcnow(),
             rebate_settled=False,
         )
 
         await test_db.create_session(session)
 
         # First settlement
-        await test_db.mark_session_rebate_settled("sess-test-456")
+        await test_db.mark_session_settled("sess-test-456")
 
         # Check if session is settled
         retrieved = await test_db.get_session("sess-test-456")
@@ -66,8 +71,8 @@ class TestAntiReplay:
 
         # In webhook handler, this would prevent second settlement:
         if retrieved.rebate_settled:
-            # This is the anti-replay check
-            pass  # Would reject the webhook
+            # This is the anti-replay check logic
+            pass 
 
     @pytest.mark.asyncio
     async def test_multiple_sessions_independent(self, test_db):
@@ -76,7 +81,9 @@ class TestAntiReplay:
             session_id="sess-test-001",
             user_address="0x123",
             network="eip155:84532",
-            amount_paid_usd=0.10,
+            amount_paid=0.10,
+            payment_asset="USDC",
+            verified_at=datetime.utcnow(),
             rebate_settled=False,
         )
 
@@ -84,7 +91,9 @@ class TestAntiReplay:
             session_id="sess-test-002",
             user_address="0x123",
             network="eip155:84532",
-            amount_paid_usd=0.10,
+            amount_paid=0.10,
+            payment_asset="USDC",
+            verified_at=datetime.utcnow(),
             rebate_settled=False,
         )
 
@@ -92,7 +101,7 @@ class TestAntiReplay:
         await test_db.create_session(session2)
 
         # Settle only first session
-        await test_db.mark_session_rebate_settled("sess-test-001")
+        await test_db.mark_session_settled("sess-test-001")
 
         # Verify states
         s1 = await test_db.get_session("sess-test-001")
