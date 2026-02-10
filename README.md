@@ -12,6 +12,7 @@ This project demonstrates a complete, production-ready flow where content access
 
 - [Product Demo](https://pincer-web.pages.dev/)
 - [Pitch Deck](https://pincer-pitch.pages.dev)
+- [Security Audit Report (Eric, Gemini AI)](audit_reports/pincer_audit_2026_02.md)
 
 ---
 
