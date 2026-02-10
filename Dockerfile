@@ -9,6 +9,7 @@ ENV UV_LINK_MODE=copy
 
 # Install dependencies (only pyproject.toml, uv.lock and README.md are needed for this step)
 COPY pyproject.toml uv.lock README.md ./
+COPY packages packages
 RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy the entire src directory to satisfy internal imports (src.config, src.database, etc.)
