@@ -43,15 +43,15 @@ class Config(BaseSettings):
     # But for local dev (separate processes), we default to separate ports
     resource_host: str = Field(default="0.0.0.0")
     resource_port: int = Field(default=4021)
-    resource_url: str = Field(..., description="URL of the Resource server (Required)")
+    resource_url: str = Field(default="http://localhost:4021", description="URL of the Resource server")
 
     pincer_host: str = Field(default="0.0.0.0")
     pincer_port: int = Field(default=4022)
-    pincer_url: str = Field(..., description="URL of the Pincer facilitator (Required)")
+    pincer_url: str = Field(default="http://localhost:4022", description="URL of the Pincer facilitator")
 
     merchant_host: str = Field(default="0.0.0.0")
     merchant_port: int = Field(default=4023)
-    merchant_url: str = Field(..., description="URL of the Merchant server (Required)")
+    merchant_url: str = Field(default="http://localhost:4023", description="URL of the Merchant server")
 
 
 
@@ -83,6 +83,7 @@ class Config(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"
 
 
 # Global config instance
