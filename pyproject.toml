@@ -1,6 +1,6 @@
 [project]
 name = "pincer-x402-starter"
-version = "0.1.0"
+version = "0.1.2"
 description = "Pincer x402 reference implementation with post-pay rebates"
 readme = "README.md"
 requires-python = ">=3.11"
