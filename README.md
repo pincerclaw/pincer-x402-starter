@@ -3,6 +3,8 @@
 [![SDK CI/CD](https://github.com/pincerclaw/pincer-x402-starter/actions/workflows/sdk-ci-cd.yml/badge.svg)](https://github.com/pincerclaw/pincer-x402-starter/actions/workflows/sdk-ci-cd.yml)
 [![PyPI version](https://img.shields.io/pypi/v/pincer-sdk.svg)](https://pypi.org/project/pincer-sdk/)
 [![Colosseum Agent Hackathon](https://img.shields.io/badge/Colosseum-Agent%20Hackathon-purple)](https://colosseum.com/agent-hackathon/projects/pincer-ad-protocol-for-ai-agents)
+[![Security Audited](https://img.shields.io/badge/Security-Audited-blue)](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports)
+[![X Follow](https://img.shields.io/twitter/follow/pincerclaw?style=social)](https://x.com/pincerclaw)
 
 **The standard implementation for Pincer's x402-sponsored access protocol.**
 
@@ -13,6 +15,10 @@ This project demonstrates a complete, production-ready flow where content access
 - [Product Demo](https://pincer-web.pages.dev/)
 - [Pitch Deck](https://pincer-pitch.pages.dev)
 - [Security Audit Reports](https://github.com/pincerclaw/pincer-x402-starter/tree/main/audit_reports)
+- [Pincer SDK](https://pypi.org/project/pincer-sdk/)
+- [Pincer Integration (for Human)](https://pincerclaw.github.io/pincer-x402-starter/)
+- [Pincer Integration (for Agents)](https://pincer.zeabur.app/skill.md)
+- [Pincer API docs](https://pincer.zeabur.app/docs)
 
 ---
 
