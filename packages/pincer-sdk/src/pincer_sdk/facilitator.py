@@ -33,8 +33,9 @@ class PincerFacilitatorClient:
     Compatible with x402 FacilitatorClient interface but preserves Pincer-specific data.
     """
 
-    def __init__(self, client: "PincerClient"):
+    def __init__(self, client: "PincerClient", supported_schemes: Optional[Any] = None):
         self.client = client
+        self.supported_schemes = supported_schemes
 
     async def verify(self, payload, requirements):
         """Verify payment and capture Pincer-specific data (sponsors)."""
@@ -105,13 +106,24 @@ class PincerFacilitatorClient:
     
     def get_supported(self):
         """Get supported payment kinds/schemes."""
-        import httpx
         from x402.schemas import SupportedResponse
         
-        # Use a sync client for initialization as this method is called synchronously
-        # by x402 server initialization
-        base_url = str(self.client.base_url)
-        with httpx.Client(base_url=base_url) as client:
-            response = client.get("/supported")
-            response.raise_for_status()
-            return SupportedResponse(**response.json())
+        # 1. Use pre-defined schemes if available (avoids startup HTTP calls)
+        if self.supported_schemes:
+            if isinstance(self.supported_schemes, SupportedResponse):
+                return self.supported_schemes
+            return SupportedResponse(**self.supported_schemes)
+            
+        # 2. Otherwise fetch from the facilitator API
+        import httpx
+        base_url = str(self.client._http.base_url) if hasattr(self.client, "_http") else str(self.client.base_url)
+        
+        try:
+            with httpx.Client(base_url=base_url, timeout=5.0) as client:
+                response = client.get("/supported")
+                response.raise_for_status()
+                return SupportedResponse(**response.json())
+        except Exception as e:
+            logger.warning(f"Could not fetch supported schemes from {base_url}: {e}")
+            # Return a minimal valid response as fallback to allow startup to continue
+            return SupportedResponse(kinds=[], extensions=[], signers=[])

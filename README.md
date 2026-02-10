@@ -207,3 +207,20 @@ uv run python scripts/test_payment.py
 ```
 
 _Note: Ensure all services are running before executing the test._
+
+---
+
+## 📂 Examples
+
+Explore these standalone scripts to understand specific integrations:
+
+- **[Buyer Flow](examples/x402_buyer_flow.py)**: `examples/x402_buyer_flow.py`
+  - Demonstrates how a client handles the 402 Payment Required response, signs the payment (SVM/Solana), and accesses content.
+  - Connects to the live demo by default.
+
+- **[Resource Server](examples/x402_resource_integration.py)**: `examples/x402_resource_integration.py`
+  - Shows how to build a FastAPI server protected by `PincerPaymentMiddleware`.
+
+- **[Sponsor Reporting](examples/sponsor_integration.py)**: `examples/sponsor_integration.py`
+  - A simple script to simulate a backend reporting a conversion to Pincer.
+  - Usage: `uv run python examples/sponsor_integration.py [session_id]`

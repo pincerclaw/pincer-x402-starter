@@ -1396,7 +1396,7 @@ wheels = [
 
 [[package]]
 name = "pincer-sdk"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "packages/pincer-sdk" }
 dependencies = [
     { name = "httpx" },
@@ -1417,7 +1417,7 @@ requires-dist = [
 
 [[package]]
 name = "pincer-x402-starter"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },

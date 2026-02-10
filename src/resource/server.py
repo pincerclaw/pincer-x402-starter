@@ -115,9 +115,20 @@ app = FastAPI(title="Resource Server", description="x402-protected resource serv
 logger.info("Initializing Pincer Client and x402 server...")
 pincer_client = PincerClient(base_url=config.pincer_url)
 
+# In unified deployment, we might want to avoid the startup HTTP call that deadlocks.
+# We can provide the supported schemes directly if we known them.
+supported_schemes_fallback = {
+    "kinds": [
+        {"x402Version": 2, "scheme": "exact", "network": SVM_NETWORK, "extra": {}},
+        {"x402Version": 2, "scheme": "exact", "network": EVM_NETWORK, "extra": {}},
+    ],
+    "extensions": [],
+    "signers": []
+}
+
 # Create x402 server using Composition Pattern
-# 1. Use Pincer's client (handles extra data like sponsors)
-facilitator = PincerFacilitatorClient(pincer_client)
+# 1. Use Pincer's client with a fallback for supported schemes to avoid startup deadlock
+facilitator = PincerFacilitatorClient(pincer_client, supported_schemes=supported_schemes_fallback)
 # 2. Pass it to the standard server
 server = x402ResourceServer(facilitator)
 

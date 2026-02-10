@@ -23,6 +23,14 @@ Built for the autonomous economy. Pincer APIs are designed to be consumed by AI 
 
 Sponsors can subsidize user access. Pincer's "Post-Pay Rebate" system allows third parties to refund user fees instantly, driving traffic without lowering the paywall.
 
+## Examples
+
+Check out the `examples/` directory for standalone scripts demonstrating key integrations:
+
+- [Buyer Flow](../examples/x402_buyer_flow.py): Client-side payment handling.
+- [Resource Server](../examples/x402_resource_integration.py): Protecting content with x402.
+- [Sponsor Integration](../examples/sponsor_integration.py): Reporting conversions.
+
 ## Architecture
 
 Understand how Pincer facilitates trustless payments and rebates between Agents and APIs.
