@@ -5,10 +5,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from x402.client import x402Client
-from x402.http.clients import x402HttpxClient  # type: ignore
+from x402 import x402Client
+from x402.http.clients import x402HttpxClient
 from x402.mechanisms.svm import KeypairSigner
-from x402.mechanisms.svm.exact import register_exact_svm_client
+from x402.mechanisms.svm.exact.register import register_exact_svm_client
 
 from src.config import config
 
@@ -17,9 +17,10 @@ async def test_payment():
     """Test a simple x402 payment."""
     print("🔍 Testing x402 payment flow...\n")
     
-    print(f"SVM Address: {config.svm_address}")
-    print(f"SVM Private Key (first 20 chars): {config.svm_private_key[:20]}...")
+    print(f"SVM Address: {config.svm_address or 'Not set'}")
     print(f"Resource URL: {config.resource_url}")
+    print(f"Pincer URL: {config.pincer_url}")
+    print(f"Merchant URL: {config.merchant_url}")
     print(f"Content Price: ${config.content_price_usd}\n")
     
     # Create client

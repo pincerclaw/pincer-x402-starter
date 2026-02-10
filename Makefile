@@ -4,7 +4,7 @@ setup:
 	@./scripts/setup_uv.sh
 
 start:
-	@uv run uvicorn src.pincer.server:app --host 0.0.0.0 --port 8080 --workers 4
+	@uv run uvicorn src.pincer.server:app --host 0.0.0.0 --port 4022 --workers 4
 
 test:
 	@uv run pytest

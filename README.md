@@ -28,23 +28,15 @@ This project demonstrates a complete, production-ready flow where content access
 
 The fastest way to get the demo running.
 
-### 1. Prerequisites
-
-- **Python 3.10+**
-- **[uv](https://github.com/astral-sh/uv)** (Fast Python package installer)
-  ```bash
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  ```
-
-### 2. Installation
+### 1. Installation
 
 ```bash
 # Clone the repository
 git clone https://github.com/pincerclaw/pincer-x402-starter.git
 cd pincer-x402-starter
 
-# Run the setup script (installs dependencies, sets up virtualenv)
-./scripts/setup_uv.sh
+# Run the setup script (installs uv, dependencies, sets up virtualenv)
+make setup
 ```
 
 ### 3. Configuration
@@ -58,44 +50,24 @@ nano .env
 
 > **Required:** Set `TREASURY_SVM_PRIVATE_KEY` (Solana) or `TREASURY_EVM_PRIVATE_KEY` (Base) to enable real on-chain settlement. If left blank, the system runs in **Simulation Mode**.
 
-### 4. Run the Demo
+### 3. Run the Demo
 
-For a full end-to-end flow, you need to run three separate services.
+For a full end-to-end flow, you need to run three separate services (Facilitator, Resource Server, Merchant Server).
 
-#### Option A: One-click local setup (Recommended for development)
+#### Step 1: Start the Ecosystem
 
-We provide a helper script to start all services (Facilitator, Resource, Merchant) in separate processes:
+The easiest way is to use our combined runner:
 
 ```bash
 uv run scripts/run_all.py
 ```
 
-#### Option B: Manual independent startup
+#### Step 2: Run the Demo Agent
 
-Start each service in a separate terminal window:
-
-1. **Pincer Facilitator**: Core protocol engine.
-
-   ```bash
-   uv run python src/pincer/server.py
-   ```
-
-2. **Resource Server**: Paywalled content provider.
-
-   ```bash
-   uv run python src/resource/server.py
-   ```
-
-3. **Merchant Server**: Sponsor backend.
-   ```bash
-   uv run python src/merchant/server.py
-   ```
-
-**Terminal 2: Run the Demo Agent**
-_Simulates a user requesting content from the Resource Server._
+In a **new terminal window**, run the agent to simulate a user requesting content:
 
 ```bash
-uv run python src/agent/demo.py
+make demo
 ```
 
 ---
@@ -228,18 +200,38 @@ Key environment variables in `.env`:
 
 ---
 
-## 🧪 Testing
+---
 
-To verify the entire system from scratch:
+## 🧪 Verification
+
+To verify that the entire system is properly configured and connected:
 
 ```bash
-# Run the end-to-end demo script
+# Run the connectivity test script
 uv run python scripts/test_payment.py
 ```
 
-_Note: Ensure all services are running before executing the test._
+This script checks:
+
+- Environment variable configuration
+- Wallet address validity
+- Basic connectivity to the Resource Server
 
 ---
+
+## 🛠️ Troubleshooting
+
+### Missing Private Keys
+
+If you see errors related to `TREASURY_SVM_PRIVATE_KEY`, ensure you have generated a Solana wallet or set the keys in `.env`. By default, the system runs in **Simulation Mode** if keys are missing, but on-chain settlement requires them.
+
+### SOL Faucet
+
+If you are running on Solana Devnet, you'll need test SOL for transactions. Use the [Solana Faucet](https://faucet.solana.com/).
+
+### Port Conflicts
+
+The demo uses ports `4021`, `4022`, and `4023`. Ensure these ports are available on your machine.
 
 ## 📂 Examples
 
