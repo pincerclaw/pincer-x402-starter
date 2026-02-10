@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
 # Add parent to path
@@ -77,6 +78,58 @@ async def startup():
 async def health_check() -> dict:
     """Health check endpoint."""
     return {"status": "ok", "service": "pincer"}
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """Root endpoint with service information."""
+    html_content = """
+    <html>
+        <head>
+            <title>Pincer x402 Facilitator</title>
+            <style>
+                body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.5; color: #333; }
+                a { color: #0066cc; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+                .card { border: 1px solid #eee; padding: 1.5rem; border-radius: 8px; margin-bottom: 1rem; background: #f9f9f9; }
+                h1 { margin-bottom: 0.5rem; }
+                h3 { margin-top: 0; }
+                code { background: #eee; padding: 0.2rem 0.4rem; border-radius: 4px; }
+            </style>
+        </head>
+        <body>
+            <h1>Pincer x402 Facilitator</h1>
+            <p>Welcome to the Pincer x402 Facilitator service.</p>
+            
+            <div class="card">
+                <h3>About</h3>
+                <p>This service acts as an x402 Facilitator, verifying payments and managing sponsorship rebates.</p>
+            </div>
+
+            <div class="card">
+                <h3>Endpoints</h3>
+                <ul>
+                    <li><a href="/docs">/docs</a> - API Documentation</li>
+                    <li><a href="/supported">/supported</a> - Supported payment schemes</li>
+                    <li><a href="/health">/health</a> - Service health check</li>
+                </ul>
+            </div>
+            
+            <p>Go to <a href="/docs">API Docs</a> to explore available endpoints.</p>
+        </body>
+    </html>
+    """
+    return html_content
+
+
+
+@app.get("/skill.md")
+async def get_skill_md():
+    """Get the SKILL.md definition for this service."""
+    skill_path = Path(__file__).parent / "skill.md"
+    if not skill_path.exists():
+         raise HTTPException(status_code=404, detail="SKILL.md not found")
+    return FileResponse(skill_path, media_type="text/markdown")
 
 
 @app.post("/verify")
